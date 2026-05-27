@@ -18,3 +18,7 @@
 
 O schema do banco está no arquivo:
 schema.sql
+
+## Project Status
+
+Initial database schema created and versioned with Git.
