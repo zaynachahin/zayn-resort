@@ -22,3 +22,9 @@ schema.sql
 ## Project Status
 
 Initial database schema created and versioned with Git.
+
+## Next Steps
+
+- Create GET /rooms
+- Create POST /rooms
+- Study pull requests
