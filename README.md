@@ -1,5 +1,11 @@
 # Zayn Resort
 
+## Sobre o Projeto
+
+Zayn Resort é um sistema backend para gerenciamento de reserva de hotel.
+
+O projeto está sendo desenvolvido para estudo de backend com foco em APIs REST, modelagem de banco de dados, versionamento com git e fluxo de desenvolvimento utilizando GitHub.
+
 ## Funcionalidades
 
 - Cadastro de clientes
