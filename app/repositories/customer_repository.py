@@ -22,6 +22,17 @@ def get_customer_by_id(customer_id):
     customer = execute_query(query, params, fetch=True)
     return customer
 
+def get_customer_by_cpf(cpf):
+    query = """
+    SELECT id
+    FROM customers
+    WHERE cpf = %s;
+    """
+
+    params = (cpf,)
+
+    customer = execute_query(query, params, fetch=True)
+    return customer
 
 def create_customer(full_name, date_of_birth, cpf, newsletter_opt_in):
     query = """
