@@ -17,22 +17,43 @@ from uuid import UUID
 app = FastAPI()
 
 
-@app.get("/customers")
+@app.get("/customers", status_code=status.HTTP_200_OK)
 def get_customers():
-    return list_customers()
+    customers = list_customers()
+
+    response = []
+
+    for customer in customers:
+        response.append(
+            {
+                "customer_id": customer[0],
+                "full_name": customer[1],
+                "date_of_birth": customer[2],
+                "cpf": customer[3],
+                "newsletter_opt_in": customer[4],
+            }
+        )
+
+    return response
 
 
-@app.get("/customers/{customer_id}")
+@app.get("/customers/{customer_id}", status_code=status.HTTP_200_OK)
 def get_customer(customer_id: UUID):
     customer = get_customer_by_id(customer_id)
 
     if not customer:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail= "Customer not found"
             )
     
-    return customer[0]
+    return {
+        "customer_id": customer[0][0],
+        "full_name": customer[0][1],
+        "date_of_birth": customer[0][2],
+        "cpf": customer[0][3],
+        "newsletter_opt_in": customer[0][4],
+    }
 
 
 @app.post("/customers", status_code= status.HTTP_201_CREATED)
@@ -41,7 +62,7 @@ def create_customer_endpoint(customer: CustomerCreate):
 
     if existing_customer:
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail= "CPF is registered"
             )
     
@@ -63,7 +84,7 @@ def update_customer_endpoint(customer_id:UUID, customer: CustomerUpdate):
 
     if existing_cpf:
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail="CPF is registered"
         )
     
@@ -77,7 +98,7 @@ def update_customer_endpoint(customer_id:UUID, customer: CustomerUpdate):
 
     if not updated_customer:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found"
         )
     
