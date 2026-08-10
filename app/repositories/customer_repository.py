@@ -100,3 +100,28 @@ def update_customer(customer_id, full_name, date_of_birth, cpf, newsletter_opt_i
 
     result = execute_query(query, params, fetch=True)
     return result
+
+allowed_customer_columns = {"full_name", "date_of_birth", "cpf", "newsletter_opt_in"}
+
+def patch_customer(customer_id, fields: dict):
+    set_clauses = []
+    params = []
+
+    for column, value in fields.items():
+        if column in allowed_customer_columns:
+            set_clauses.append(f"{column} = %s")
+            params.append(value)
+
+    set_clause = ", ".join(set_clauses)
+
+    query = f"""
+    UPDATE customers
+    SET {set_clause}, updated_at = NOW()
+    WHERE id = %s
+    RETURNING id;
+    """
+
+    params.append(customer_id)
+
+    result = execute_query(query, params, fetch=True)
+    return result

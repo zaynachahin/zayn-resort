@@ -7,9 +7,10 @@ from app.repositories.customer_repository import (
     get_customer_by_cpf_excluding_id,
     create_customer,
     update_customer,
+    patch_customer
 )
     
-from app.schemas.customer_schema import CustomerCreate, CustomerUpdate
+from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, CustomerPatch
 
 from uuid import UUID
 
@@ -101,6 +102,40 @@ def update_customer_endpoint(customer_id:UUID, customer: CustomerUpdate):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found"
         )
+    
+    return {
+        "message": "Customer updated",
+        "customer_id": updated_customer[0][0]
+    }
+
+@app.patch("/customers/{customer_id}", status_code=status.HTTP_200_OK)
+def patch_customer_endpoint(customer_id:UUID, customer: CustomerPatch):
+    fields = customer.model_dump(exclude_unset=True)
+
+    if not fields:
+        raise HTTPException(
+            status_code= status.HTTP_400_BAD_REQUEST,
+            detail = "No input provided"
+        )
+
+    registered_customer = get_customer_by_id(customer_id)
+
+    if not registered_customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail= "Customer not found"
+        )
+    
+    if "cpf" in fields:
+        existing_customer = get_customer_by_cpf_excluding_id(fields["cpf"], customer_id)
+
+        if existing_customer:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="CPF is registered"
+                )
+
+    updated_customer = patch_customer(customer_id, fields)
     
     return {
         "message": "Customer updated",
