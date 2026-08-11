@@ -40,6 +40,8 @@ fake_updated_customer = [
     ("00000000-0000-0000-0000-000000000001",),
 ]
 
+fake_deleted_customer = [("00000000-0000-0000-0000-000000000001",)]
+
 fake_updated_customer_id = "00000000-0000-0000-0000-000000000001"
 
 def valid_customer_payload():
@@ -81,7 +83,7 @@ def test_get_customer_by_id_returns_200(monkeypatch):
     monkeypatch.setattr("app.main.get_customer_by_id", lambda customer_id: fake_customers)
 
     # Act
-    response = client.get("/customers/d3fac323-9b89-4ec8-b05d-b1ef54e0b0eb")
+    response = client.get(f"/customers/{fake_customer_id}")
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
@@ -92,7 +94,7 @@ def test_get_customer_by_id_returns_404(monkeypatch):
     monkeypatch.setattr("app.main.get_customer_by_id", lambda customer_id: [])
 
     # Act
-    response = client.get("/customers/00000000-0000-0000-0000-000000000000")
+    response = client.get(f"/customers/{non_existent_customer_id}")
 
     # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -407,6 +409,45 @@ def test_patch_customer_returns_422_when_id_is_invalid():
 
     # Act
     response = client.patch("/customers/abc", json=payload)
+
+    # Assert
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+# ==================== DELETE ====================
+
+def test_delete_customer_returns_204_when_customer_is_deleted(monkeypatch):
+    # Arrange
+    monkeypatch.setattr(
+        "app.main.soft_delete_customer",
+        lambda customer_id: fake_deleted_customer,
+    )
+
+    # Act
+    response = client.delete(f"/customers/{fake_customer_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.content == b""
+
+
+def test_delete_customer_returns_404_when_customer_does_not_exist(monkeypatch):
+    # Arrange
+    monkeypatch.setattr(
+        "app.main.soft_delete_customer",
+        lambda customer_id: [],
+    )
+
+    # Act
+    response = client.delete(f"/customers/{non_existent_customer_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Customer not found or customer is deactivated"
+
+
+def test_delete_customer_returns_422_when_id_is_invalid():
+    # Act
+    response = client.delete("/customers/abc")
 
     # Assert
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
