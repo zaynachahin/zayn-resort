@@ -7,7 +7,8 @@ from app.repositories.customer_repository import (
     get_customer_by_cpf_excluding_id,
     create_customer,
     update_customer,
-    patch_customer
+    patch_customer,
+    soft_delete_customer
 )
     
 from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, CustomerPatch
@@ -141,3 +142,13 @@ def patch_customer_endpoint(customer_id:UUID, customer: CustomerPatch):
         "message": "Customer updated",
         "customer_id": updated_customer[0][0]
     }
+
+@app.delete("/customers/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+def soft_delete_customer_endpoint(customer_id: UUID):
+    deleted_customer = soft_delete_customer(customer_id)
+
+    if not deleted_customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found or customer is deactivated"
+        )
