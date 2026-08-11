@@ -4,6 +4,7 @@ def list_customers():
     query = """
     SELECT *
     FROM customers
+    WHERE deleted_at IS NULL;
     """
 
     customers = execute_query(query, fetch=True)
@@ -14,7 +15,7 @@ def get_customer_by_id(customer_id):
     query = """
     SELECT id, full_name, date_of_birth, cpf, newsletter_opt_in 
     FROM customers
-    WHERE id = %s;
+    WHERE id = %s AND deleted_at IS NULL;
     """
 
     params = (str(customer_id),)
@@ -122,6 +123,19 @@ def patch_customer(customer_id, fields: dict):
     """
 
     params.append(customer_id)
+
+    result = execute_query(query, params, fetch=True)
+    return result
+
+def soft_delete_customer(customer_id):
+    query = """
+    UPDATE customers
+    SET deleted_at = NOW()
+    WHERE id = %s AND deleted_at IS NULL
+    RETURNING id;
+    """
+
+    params = (customer_id,)
 
     result = execute_query(query, params, fetch=True)
     return result
