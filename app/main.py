@@ -15,9 +15,11 @@ from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, Customer
 
 from uuid import UUID
 
+from app.routes import room_category_routes
 
 app = FastAPI()
 
+app.include_router(room_category_routes.router)
 
 @app.get("/customers", status_code=status.HTTP_200_OK)
 def get_customers():
