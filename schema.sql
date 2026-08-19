@@ -9,22 +9,22 @@ CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name VARCHAR(255) NOT NULL,
     date_of_birth DATE NOT NULL,
-    cpf VARCHAR(11) NOT NULL,
+    cpf VARCHAR(11) NOT NULL UNIQUE,
     newsletter_opt_in BOOLEAN NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP,/
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
 
 
 --ROOM CATEGORY
 
-CREATE TABLE room_category (
+CREATE TABLE room_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(50) NOT NULL,
+    name VARCHAR(50) NOT NULL UNIQUE,
     capacity INTEGER NOT NULL,
-    daily_rate NUMERIC NOT NULL,
-    created_at TIMESTAMP NOT NULL,
+    daily_rate NUMERIC(10,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
@@ -35,9 +35,10 @@ CREATE TABLE room_category (
 CREATE TABLE rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
-    room_category_id UUID NOT NULL REFERENCES room_category(id),
+    room_category_id UUID NOT NULL REFERENCES room_categories(id),
     description VARCHAR(500) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
+    number VARCHAR(10) NOT NULL UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
@@ -53,7 +54,7 @@ CREATE TABLE reservations (
     check_out_at TIMESTAMP NOT NULL,
     status SMALLINT NOT NULL,
     total_amount NUMERIC(10,2) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
