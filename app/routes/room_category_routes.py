@@ -10,8 +10,8 @@ from app.repositories.room_category_repository import(
     patch_room_category
 )
 from app.schemas.room_category_schema import (
-    RoomCategoryCreate, 
-    RoomCategoryUpdate, 
+    RoomCategoryCreate,
+    RoomCategoryUpdate,
     RoomCategoryPatch
 )
 from uuid import UUID
@@ -24,7 +24,7 @@ router = APIRouter(
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_room_category_endpoint(room_category:RoomCategoryCreate):
     existing_room_category = get_room_category_by_name(room_category.name)
-
+    
     if existing_room_category:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

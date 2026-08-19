@@ -55,14 +55,12 @@ def create_customer(full_name, date_of_birth, cpf, newsletter_opt_in):
     date_of_birth,
     cpf,
     newsletter_opt_in,
-    created_at
     )
     VALUES(
     %s,
     %s,
     %s,
     %s,
-    NOW()
     )
     RETURNING id;
     """
