@@ -21,13 +21,17 @@ CREATE TABLE customers (
 
 CREATE TABLE room_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
     capacity INTEGER NOT NULL,
     daily_rate NUMERIC(10,2) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP
 );
+
+CREATE UNIQUE INDEX room_categories_name_active_unique
+ON room_categories (name)
+WHERE deleted_at IS NULL;
 
 
 --ROOMS
@@ -46,13 +50,13 @@ CREATE TABLE rooms (
 
 --RESERVATIONS
 
-CREATE TABLE reservations (
+CREATE TABLE reservations(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id UUID NOT NULL REFERENCES customers(id),
     room_id UUID NOT NULL REFERENCES rooms(id),
-    check_in_at TIMESTAMP NOT NULL,
-    check_out_at TIMESTAMP NOT NULL,
-    status SMALLINT NOT NULL,
+    check_in DATE NOT NULL,
+    check_out DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'confirmed',
     total_amount NUMERIC(10,2) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP,
