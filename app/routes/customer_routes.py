@@ -15,7 +15,7 @@ from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, Customer
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK, summary=" ")
 def get_customers():
     customers = list_customers()
     response = []
@@ -30,7 +30,7 @@ def get_customers():
     return response
 
 
-@router.get("/{customer_id}", status_code=status.HTTP_200_OK)
+@router.get("/{customer_id}", status_code=status.HTTP_200_OK, summary=" ")
 def get_customer(customer_id: UUID):
     customer = get_customer_by_id(customer_id)
     if not customer:
@@ -44,7 +44,7 @@ def get_customer(customer_id: UUID):
     }
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
 def create_customer_endpoint(customer: CustomerCreate):
     existing_customer = get_customer_by_cpf(customer.cpf)
     if existing_customer:
@@ -59,7 +59,7 @@ def create_customer_endpoint(customer: CustomerCreate):
     return {"message": "Customer created", "customer_id": customer_id}
 
 
-@router.put("/{customer_id}", status_code=status.HTTP_200_OK)
+@router.put("/{customer_id}", status_code=status.HTTP_200_OK, summary=" ")
 def update_customer_endpoint(customer_id: UUID, customer: CustomerUpdate):
     existing_cpf = get_customer_by_cpf_excluding_id(customer.cpf, customer_id)
     if existing_cpf:
@@ -78,7 +78,7 @@ def update_customer_endpoint(customer_id: UUID, customer: CustomerUpdate):
     return {"message": "Customer updated", "customer_id": updated_customer[0][0]}
 
 
-@router.patch("/{customer_id}", status_code=status.HTTP_200_OK)
+@router.patch("/{customer_id}", status_code=status.HTTP_200_OK, summary=" ")
 def patch_customer_endpoint(customer_id: UUID, customer: CustomerPatch):
     fields = customer.model_dump(exclude_unset=True)
     if not fields:
@@ -97,7 +97,7 @@ def patch_customer_endpoint(customer_id: UUID, customer: CustomerPatch):
     return {"message": "Customer updated", "customer_id": updated_customer[0][0]}
 
 
-@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")
 def soft_delete_customer_endpoint(customer_id: UUID):
     deleted_customer = soft_delete_customer(customer_id)
     if not deleted_customer:
