@@ -18,7 +18,7 @@ router = APIRouter(
     tags = ["Reservations"],
 )
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
 def create_reservation_endpoint(payload: ReservationCreate):
     try:
         reservation_id = reservation_service.create_reservation(
@@ -41,7 +41,7 @@ def create_reservation_endpoint(payload: ReservationCreate):
     except RoomNotAvailableError:
         raise HTTPException(status_code=409, detail="Room not available")
 
-@router.patch("/{id}/dates", status_code=status.HTTP_200_OK)
+@router.patch("/{id}/dates", status_code=status.HTTP_200_OK, summary=" ")
 def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
     try:
         reservation_id = reservation_service.update_reservation_dates(
@@ -66,7 +66,7 @@ def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
     except RoomNotAvailableError:
         raise HTTPException(status_code=409, detail="Room not available")
 
-@router.patch("/{id}/status", status_code=status.HTTP_200_OK)
+@router.patch("/{id}/status", status_code=status.HTTP_200_OK, summary=" ")
 def update_reservation_status_endpoint(id:UUID, payload:ReservationStatusUpdate):
     try:
         reservation_id = reservation_service.update_reservation_status(
@@ -81,7 +81,7 @@ def update_reservation_status_endpoint(id:UUID, payload:ReservationStatusUpdate)
     except InvalidStatusTransitionError:
         raise HTTPException(status_code=409, detail="Cannot change status")
 
-@router.get("/{id}", status_code=status.HTTP_200_OK)
+@router.get("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def get_reservation_endpoint(id:UUID):
     reservation = reservation_repository.get_reservation_by_id(id)
 
@@ -101,7 +101,7 @@ def get_reservation_endpoint(id:UUID):
         "total_amount": reservation[0][6]
     }
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK, summary=" ")
 def list_reservations_endpoint():
     reservations = reservation_repository.list_reservations()
 
@@ -122,7 +122,7 @@ def list_reservations_endpoint():
 
     return response
 
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")
 def delete_reservation_endpoint(id: UUID):
     try:
         reservation_service.soft_delete_reservation(id)

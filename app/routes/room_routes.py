@@ -8,7 +8,7 @@ from app.repositories.room_category_repository import get_room_category_by_id
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK, summary=" ")
 def list_rooms():
     rooms = room_repository.list_rooms()
     response = []
@@ -23,7 +23,7 @@ def list_rooms():
     return response
 
 
-@router.get("/{id}", status_code=status.HTTP_200_OK)
+@router.get("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def get_room(id: UUID):
     room = room_repository.get_room_by_id(id)
     if not room:
@@ -37,7 +37,7 @@ def get_room(id: UUID):
     }
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
 def create_room(payload: RoomCreate):
     category = get_room_category_by_id(payload.room_category_id)
     if not category:
@@ -56,7 +56,7 @@ def create_room(payload: RoomCreate):
     return {"room_id": room_id}
 
 
-@router.put("/{id}", status_code=status.HTTP_200_OK)
+@router.put("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def update_room(id: UUID, payload: RoomUpdate):
     room = room_repository.get_room_by_id(id)
     if not room:
@@ -80,7 +80,7 @@ def update_room(id: UUID, payload: RoomUpdate):
     return {"message": "Room updated successfully"}
 
 
-@router.patch("/{id}", status_code=status.HTTP_200_OK)
+@router.patch("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def patch_room(id: UUID, payload: RoomPatch):
     room = room_repository.get_room_by_id(id)
     if not room:
@@ -104,7 +104,7 @@ def patch_room(id: UUID, payload: RoomPatch):
     return {"message": "Room updated successfully"}
 
 
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")
 def soft_delete_room_endpoint(id: UUID):
     existing_room = room_repository.get_room_by_id_including_deleted(id)
     if not existing_room:

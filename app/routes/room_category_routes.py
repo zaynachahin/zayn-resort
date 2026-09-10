@@ -21,7 +21,7 @@ router = APIRouter(
     tags = ["Room Categories"],
 )
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
 def create_room_category_endpoint(room_category:RoomCategoryCreate):
     existing_room_category = get_room_category_by_name(room_category.name)
     
@@ -43,7 +43,7 @@ def create_room_category_endpoint(room_category:RoomCategoryCreate):
     }
 
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK, summary=" ")
 def list_room_categories_endpoint():
     room_categories = list_room_categories()
 
@@ -61,7 +61,7 @@ def list_room_categories_endpoint():
 
     return response
 
-@router.get("/{id}", status_code=status.HTTP_200_OK)
+@router.get("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def get_room_category_endpoint(id:UUID):
     room_category = get_room_category_by_id(id)
 
@@ -78,7 +78,7 @@ def get_room_category_endpoint(id:UUID):
         "daily_rate": room_category[0][3]
     }
 
-@router.put("/{id}", status_code=status.HTTP_200_OK)
+@router.put("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def update_room_category_endpoint(id:UUID, room_category:RoomCategoryUpdate):
     registered_room_category = get_room_category_by_id(id)
 
@@ -108,7 +108,7 @@ def update_room_category_endpoint(id:UUID, room_category:RoomCategoryUpdate):
         "room_category_id": updated_room_category[0][0]
     }
 
-@router.patch("/{id}", status_code=status.HTTP_200_OK)
+@router.patch("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def patch_room_category_endpoint(id:UUID, room_category: RoomCategoryPatch):
     fields = room_category.model_dump(exclude_unset=True)
 
@@ -142,7 +142,7 @@ def patch_room_category_endpoint(id:UUID, room_category: RoomCategoryPatch):
         "room_category_id": updated_room_category[0][0]
     }
 
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")
 def soft_delete_room_category_endpoint(id:UUID):
     room_category = soft_delete_room_category(id)
 
