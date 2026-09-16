@@ -1,22 +1,41 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from decimal import Decimal
-from datetime import date
 from uuid import UUID
 
-class RoomCreate(BaseModel):
-    name: str = Field(min_length=1)
-    description: str | None = Field(default=None, min_length=1)
-    number: str = Field(min_length=1)
+class ValidatorMixin:
+    @field_validator("name", "number")
+    @classmethod
+    def strip_and_validate(cls, value):
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Field cannot be empty")
+        return stripped
+
+class OptionalTextValidatorMixin:
+    @field_validator("description")
+    @classmethod
+    def strip_optional(cls, value):
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped if stripped else None
+    
+class RoomCreate(BaseModel, ValidatorMixin, OptionalTextValidatorMixin):
+    name: str
+    description: str | None = Field(default=None)
+    number: str
     room_category_id: UUID
 
-class RoomUpdate(BaseModel):
-    name: str = Field(min_length=1)
-    description: str | None = Field(default=None, min_length=1)
-    number: str = Field(min_length=1)
+class RoomUpdate(BaseModel, ValidatorMixin, OptionalTextValidatorMixin):
+    name: str
+    description: str | None = Field(default=None)
+    number: str
     room_category_id: UUID
 
-class RoomPatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1)
-    description: str | None = Field(default=None, min_length=1)
-    number: str | None = Field(default=None, min_length=1)
+class RoomPatch(BaseModel, ValidatorMixin, OptionalTextValidatorMixin):
+    name: str | None = Field(default=None)
+    description: str | None = Field(default=None)
+    number: str | None = Field(default=None)
     room_category_id: UUID | None = None
