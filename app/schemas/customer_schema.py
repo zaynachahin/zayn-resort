@@ -1,20 +1,47 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import date
 
-class CustomerCreate(BaseModel):
-    full_name: str = Field(min_length=1)
+class ValidatorMixin:
+    @field_validator("full_name")
+    @classmethod
+    def strip_and_validate_full_name(cls, value):
+        if value is None:
+            return None
+        stripped_value = value.strip()
+        if not stripped_value:
+            raise ValueError("Field cannot be empty")
+        return stripped_value
+
+    @field_validator("cpf")
+    @classmethod
+    def strip_and_validate_cpf(cls, value):
+        if value is None:
+            return None
+        stripped_value = value.strip()
+        if not stripped_value:
+            raise ValueError("CPF cannot be empty")
+        if len(stripped_value) != 11:
+            raise ValueError("CPF must have exactly 11 digits")
+        if not stripped_value.isdigit():
+            raise ValueError("CPF must contain only digits")
+        return stripped_value
+
+
+
+class CustomerCreate(BaseModel, ValidatorMixin):
+    full_name: str
     date_of_birth: date
-    cpf: str = Field(min_length=11, max_length=11)
+    cpf: str
     newsletter_opt_in: bool
 
-class CustomerUpdate(BaseModel):
-    full_name: str = Field(min_length=1)
+class CustomerUpdate(BaseModel, ValidatorMixin):
+    full_name: str
     date_of_birth: date
-    cpf: str = Field(min_length=11, max_length=11)
+    cpf: str
     newsletter_opt_in: bool
 
-class CustomerPatch(BaseModel):
-    full_name: str | None = Field(default=None, min_length=1)
+class CustomerPatch(BaseModel, ValidatorMixin):
+    full_name: str | None = Field(default=None)
     date_of_birth: date | None = None
-    cpf: str | None = Field(default=None, min_length=11, max_length=11)
+    cpf: str | None = Field(default=None)
     newsletter_opt_in: bool | None = None

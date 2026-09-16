@@ -1,8 +1,14 @@
-from pydantic import BaseModel, Field
-from decimal import Decimal
+from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 from datetime import date
+from enum import Enum
 
+class ReservationStatus(str, Enum):
+    CONFIRMED = "confirmed"
+    CHECKED_IN = "checked_in"
+    CHECKED_OUT = "checked_out"
+    CANCELLED = "cancelled"
+    
 class ReservationCreate(BaseModel):
     customer_id: UUID
     room_id: UUID
@@ -14,4 +20,4 @@ class ReservationDateUpdate(BaseModel):
     check_out: date
 
 class ReservationStatusUpdate(BaseModel):
-    status: str = Field(min_length=1)
+    status: ReservationStatus
