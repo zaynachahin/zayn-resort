@@ -17,6 +17,7 @@ from app.services.reservation_exceptions import (
     InvalidReservationOperationError,
     InvalidReservationDatesError
 )
+from app.schemas.reservations_schema import ReservationStatus
 
 def _validate_reservation_dates(check_in, check_out):
     if check_out <= check_in:
@@ -59,7 +60,7 @@ def update_reservation_dates(id, check_in, check_out):
 
     status = reservation[0][5]
 
-    if status in ["cancelled", "checked_out"]:
+    if status in [ReservationStatus.CANCELLED, ReservationStatus.CHECKED_OUT]:
         raise InvalidReservationOperationError()
     
     room_id = reservation[0][2]
@@ -91,10 +92,10 @@ def update_reservation_status(id, status):
     old_status = reservation[0][5]
 
     valid_transitions = {
-        "confirmed": ["cancelled", "checked_in"],
-        "checked_in": ["checked_out"],
-        "checked_out": [],
-        "cancelled": [],
+        ReservationStatus.CONFIRMED: [ReservationStatus.CANCELLED, ReservationStatus.CHECKED_IN],
+        ReservationStatus.CHECKED_IN: [ReservationStatus.CHECKED_OUT],
+        ReservationStatus.CHECKED_OUT: [],
+        ReservationStatus.CANCELLED: [],
         }
 
     if status not in valid_transitions[old_status]:
