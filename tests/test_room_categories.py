@@ -4,29 +4,39 @@ import pytest
 # ==================== DADOS / FIXTURES ====================
 
 fake_room_category_id = "00000000-0000-0000-0000-000000000001"
+another_room_category_id = "00000000-0000-0000-0000-000000000002"
 
-fake_existing_room_category = [
-    ("00000000-0000-0000-0000-000000000002",),
-]
-
-deleted_room_category = [
-    ("00000000-0000-0000-0000-000000000002",),
-]
-
-fake_registered_room_category = [
-    (
-        "00000000-0000-0000-0000-000000000001",
-        "Test",
-        2,
-        300,
-    ),
-]
-
-expected_room_category = {
-    "room_category_id": "00000000-0000-0000-0000-000000000001",
+fake_room_category_row = {
+    "id": fake_room_category_id,
     "name": "Test",
     "capacity": 2,
-    "daily_rate": 300,
+    "daily_rate": "300",
+}
+
+fake_room_categories = [fake_room_category_row]
+
+fake_existing_room_category = {"id": another_room_category_id}
+
+fake_created_room_category = {
+    **fake_room_category_row,
+    "created_at": "2024-01-01T00:00:00",
+}
+
+fake_updated_room_category = {
+    **fake_room_category_row,
+    "updated_at": "2024-01-02T00:00:00",
+}
+
+fake_deleted_room_category = {
+    "id": fake_room_category_id,
+    "deleted_at": "2024-01-03T00:00:00",
+}
+
+expected_room_category_get_response = {
+    "room_category_id": fake_room_category_id,
+    "name": "Test",
+    "capacity": 2,
+    "daily_rate": "300",
 }
 
 @pytest.fixture
@@ -44,11 +54,11 @@ def test_create_room_category_returns_201(monkeypatch, client, valid_room_catego
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_name",
-        lambda name: [],
+        lambda name: None,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.create_room_category",
-        lambda name, capacity, daily_rate: fake_room_category_id,
+        lambda name, capacity, daily_rate: fake_created_room_category,
     )
 
     # Act
@@ -56,8 +66,7 @@ def test_create_room_category_returns_201(monkeypatch, client, valid_room_catego
 
     # Assert
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()["message"] == "Room Category Created"
-    assert response.json()["room_category_id"] == fake_room_category_id
+    assert response.json() == fake_created_room_category
 
 
 def test_create_room_category_returns_409_when_name_exists(monkeypatch, client, valid_room_category_payload):
@@ -85,9 +94,9 @@ def test_create_room_category_returns_409_when_name_exists(monkeypatch, client, 
         ("daily_rate", -50),
     ],
 )
-def test_create_room_category_returns_422_for_invalid_field(client, field, invalid_value):
+def test_create_room_category_returns_422_for_invalid_field(client, field, invalid_value, valid_room_category_payload):
     # Arrange
-    payload = {"name": "Test", "capacity": 2, "daily_rate": 200}
+    payload = valid_room_category_payload.copy()
     payload[field] = invalid_value
 
     # Act
@@ -97,9 +106,9 @@ def test_create_room_category_returns_422_for_invalid_field(client, field, inval
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
-def test_create_room_category_returns_422_when_required_field_missing(client):
+def test_create_room_category_returns_422_when_required_field_missing(client, valid_room_category_payload):
     # Arrange
-    payload = {"name": "Test", "capacity": 2, "daily_rate": 200}
+    payload = valid_room_category_payload.copy()
     del payload["name"]
 
     # Act
@@ -115,7 +124,7 @@ def test_list_room_categories_returns_200(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.list_room_categories",
-        lambda: fake_registered_room_category,
+        lambda: fake_room_categories,
     )
 
     # Act
@@ -123,14 +132,14 @@ def test_list_room_categories_returns_200(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [expected_room_category]
+    assert response.json() == [expected_room_category_get_response]
 
 
 def test_get_room_category_returns_200(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: fake_registered_room_category,
+        lambda id: fake_room_category_row,
     )
 
     # Act
@@ -138,14 +147,14 @@ def test_get_room_category_returns_200(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == expected_room_category
+    assert response.json() == expected_room_category_get_response
 
 
 def test_get_room_category_returns_404(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: [],
+        lambda id: None,
     )
 
     # Act
@@ -170,15 +179,15 @@ def test_update_room_category_returns_200(monkeypatch, client, valid_room_catego
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: fake_registered_room_category,
+        lambda id: fake_room_category_row,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_name_excluding_id",
-        lambda name, id: [],
+        lambda name, id: None,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.update_room_category",
-        lambda id, name, capacity, daily_rate: fake_existing_room_category,
+        lambda id, name, capacity, daily_rate: fake_updated_room_category,
     )
 
     # Act
@@ -186,14 +195,14 @@ def test_update_room_category_returns_200(monkeypatch, client, valid_room_catego
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"] == "Room category updated"
+    assert response.json() == fake_updated_room_category
 
 
 def test_update_room_category_returns_404_when_not_exists(monkeypatch, client, valid_room_category_payload):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: [],
+        lambda id: None,
     )
 
     # Act
@@ -208,7 +217,7 @@ def test_update_room_category_returns_409_when_name_belongs_to_another(monkeypat
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: fake_registered_room_category,
+        lambda id: fake_room_category_row,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_name_excluding_id",
@@ -229,11 +238,11 @@ def test_patch_room_category_returns_200(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: fake_registered_room_category,
+        lambda id: fake_room_category_row,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.patch_room_category",
-        lambda id, fields: fake_existing_room_category,
+        lambda id, fields: fake_updated_room_category,
     )
 
     # Act
@@ -241,10 +250,16 @@ def test_patch_room_category_returns_200(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"] == "Room category updated"
+    assert response.json() == fake_updated_room_category
 
 
-def test_patch_room_category_returns_400_when_body_empty(client):
+def test_patch_room_category_returns_400_when_body_empty(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr(
+        "app.routes.room_category_routes.get_room_category_by_id",
+        lambda id: fake_room_category_row,
+    )
+
     # Act
     response = client.patch(f"/room-categories/{fake_room_category_id}", json={})
 
@@ -257,7 +272,7 @@ def test_patch_room_category_returns_404_when_not_exists(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: [],
+        lambda id: None,
     )
 
     # Act
@@ -272,7 +287,7 @@ def test_patch_room_category_returns_409_when_name_belongs_to_another(monkeypatc
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id",
-        lambda id: fake_registered_room_category,
+        lambda id: fake_room_category_row,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_name_excluding_id",
@@ -292,8 +307,12 @@ def test_patch_room_category_returns_409_when_name_belongs_to_another(monkeypatc
 def test_soft_delete_room_category_returns_204(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
+        "app.routes.room_category_routes.get_room_category_by_id_including_deleted",
+        lambda id: fake_room_category_row,
+    )
+    monkeypatch.setattr(
         "app.routes.room_category_routes.soft_delete_room_category",
-        lambda id: deleted_room_category,
+        lambda id: fake_deleted_room_category,
     )
 
     # Act
@@ -304,11 +323,11 @@ def test_soft_delete_room_category_returns_204(monkeypatch, client):
     assert response.content == b""
 
 
-def test_soft_delete_room_category_returns_404(monkeypatch, client):
+def test_soft_delete_room_category_returns_404_when_not_exists(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
-        "app.routes.room_category_routes.soft_delete_room_category",
-        lambda id: [],
+        "app.routes.room_category_routes.get_room_category_by_id_including_deleted",
+        lambda id: None,
     )
 
     # Act
@@ -316,6 +335,26 @@ def test_soft_delete_room_category_returns_404(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Room category not found"
+
+
+def test_soft_delete_room_category_returns_409_when_already_deleted(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr(
+        "app.routes.room_category_routes.get_room_category_by_id_including_deleted",
+        lambda id: fake_room_category_row,
+    )
+    monkeypatch.setattr(
+        "app.routes.room_category_routes.soft_delete_room_category",
+        lambda id: None,
+    )
+
+    # Act
+    response = client.delete(f"/room-categories/{fake_room_category_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Room category is already deleted"
 
 
 def test_soft_delete_room_category_returns_422_when_id_invalid(client):

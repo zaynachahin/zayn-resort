@@ -41,14 +41,14 @@ def create_reservation(customer_id, room_id, check_in, check_out):
     if conflicting_reservation:
         raise RoomNotAvailableError()
 
-    room_category_id = room[0][4]
+    room_category_id = room["room_category_id"]
     room_category = get_room_category_by_id(room_category_id)
-    daily_rate = room_category[0][3]
+    daily_rate = room_category["daily_rate"]
     reservation_days = (check_out - check_in).days
     total_amount = daily_rate * reservation_days
 
-    reservation_id = reservation_repository.create_reservation(customer_id, room_id, check_in, check_out, total_amount)
-    return reservation_id
+    result = reservation_repository.create_reservation(customer_id, room_id, check_in, check_out, total_amount)
+    return result
 
 def update_reservation_dates(id, check_in, check_out):
     _validate_reservation_dates(check_in, check_out)   
@@ -58,12 +58,12 @@ def update_reservation_dates(id, check_in, check_out):
     if not reservation:
         raise ReservationNotFoundError()
 
-    status = reservation[0][5]
+    status = reservation["status"]
 
     if status in [ReservationStatus.CANCELLED, ReservationStatus.CHECKED_OUT]:
         raise InvalidReservationOperationError()
     
-    room_id = reservation[0][2]
+    room_id = reservation["room_id"]
     room = get_room_by_id(room_id)
 
     if not room:
@@ -74,14 +74,14 @@ def update_reservation_dates(id, check_in, check_out):
     if conflicting_reservation:
         raise RoomNotAvailableError()
 
-    room_category_id = room[0][4]
+    room_category_id = room["room_category_id"]
     room_category = get_room_category_by_id(room_category_id)
-    daily_rate = room_category[0][3]
+    daily_rate = room_category["daily_rate"]
     reservation_days = (check_out - check_in).days
     total_amount = daily_rate * reservation_days
 
-    reservation_id = reservation_repository.update_reservation_dates(id, check_in, check_out, total_amount)
-    return reservation_id
+    result = reservation_repository.update_reservation_dates(id, check_in, check_out, total_amount)
+    return result
 
 def update_reservation_status(id, status):
     reservation = reservation_repository.get_reservation_by_id(id)
@@ -89,7 +89,7 @@ def update_reservation_status(id, status):
     if not reservation:
         raise ReservationNotFoundError()
 
-    old_status = reservation[0][5]
+    old_status = reservation["status"]
 
     valid_transitions = {
         ReservationStatus.CONFIRMED: [ReservationStatus.CANCELLED, ReservationStatus.CHECKED_IN],
@@ -101,8 +101,8 @@ def update_reservation_status(id, status):
     if status not in valid_transitions[old_status]:
         raise InvalidStatusTransitionError()
 
-    reservation_id = reservation_repository.update_reservation_status(id, status)
-    return reservation_id
+    result = reservation_repository.update_reservation_status(id, status.value)
+    return result
 
 def soft_delete_reservation(id):
     reservation = reservation_repository.get_reservation_by_id(id)
@@ -110,5 +110,5 @@ def soft_delete_reservation(id):
     if not reservation:
         raise ReservationNotFoundError()
 
-    reservation_id = reservation_repository.soft_delete_reservation(id)
-    return reservation_id
+    result = reservation_repository.soft_delete_reservation(id)
+    return result

@@ -10,7 +10,7 @@ def get_room_by_id(id):
         WHERE id = %s AND deleted_at IS NULL;
         """
     params = (id,)
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def get_room_by_id_including_deleted(id):
@@ -20,7 +20,7 @@ def get_room_by_id_including_deleted(id):
     WHERE id = %s;
     """
     params = (id,)
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def get_room_by_number(number):
@@ -30,7 +30,7 @@ def get_room_by_number(number):
     WHERE number = %s AND deleted_at IS NULL
     """
     params = (number,)
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def get_room_by_number_excluding_id(number, id):
@@ -40,7 +40,7 @@ def get_room_by_number_excluding_id(number, id):
     WHERE number = %s AND id != %s AND deleted_at IS NULL
     """
     params = (number, id)
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def list_rooms():
@@ -49,28 +49,28 @@ def list_rooms():
     FROM rooms
     WHERE deleted_at IS NULL
     """
-    result = execute_query(query, fetch=True)
+    result = execute_query(query, fetch_all=True)
     return result
 
 def create_room(number, name, description, room_category_id):
     query = """
     INSERT INTO rooms (number, name, description, room_category_id)
     VALUES (%s, %s, %s, %s)
-    RETURNING id
+    RETURNING id, number, name, description, room_category_id, created_at;
     """
     params = (number, name, description, room_category_id)
-    result = execute_query(query, params, fetch=True)
-    return result[0][0]
+    result = execute_query(query, params, fetch_one=True)
+    return result
 
 def update_room(id, number, name, description, room_category_id):
     query = """
     UPDATE rooms
     SET number = %s, name = %s, description = %s, room_category_id = %s, updated_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id
+    RETURNING id, number, name, description, room_category_id, updated_at;
     """
     params = (number, name, description, room_category_id, id)
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def patch_room(id, fields: dict):
@@ -88,11 +88,11 @@ def patch_room(id, fields: dict):
     UPDATE rooms
     SET {set_clause}, updated_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id
+    RETURNING id, number, name, description, room_category_id, updated_at;
     """
     params.append(id)
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def soft_delete_room(id):
@@ -100,8 +100,8 @@ def soft_delete_room(id):
     UPDATE rooms
     SET deleted_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id
+    RETURNING id, deleted_at;
     """
     params = (id,)
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result

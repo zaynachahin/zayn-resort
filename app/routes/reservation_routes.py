@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from uuid import UUID
-from app.schemas.reservations_schema import ReservationCreate, ReservationDateUpdate, ReservationStatusUpdate
+from app.schemas.reservations_schema import ReservationCreate, ReservationDateUpdate, ReservationStatusUpdate, ReservationCreateResponse, ReservationUpdateResponse
 from app.services import reservation_service
 from app.repositories import reservation_repository
 from app.services.reservation_exceptions import (
@@ -18,16 +18,16 @@ router = APIRouter(
     tags = ["Reservations"],
 )
 
-@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=ReservationCreateResponse, summary=" ")
 def create_reservation_endpoint(payload: ReservationCreate):
     try:
-        reservation_id = reservation_service.create_reservation(
+        result = reservation_service.create_reservation(
             payload.customer_id,
             payload.room_id,
             payload.check_in,
             payload.check_out
         )
-        return {"reservation_id": reservation_id}
+        return result
 
     except InvalidReservationDatesError:
         raise HTTPException(status_code=422, detail="Check_out must be after check_in")
@@ -41,15 +41,15 @@ def create_reservation_endpoint(payload: ReservationCreate):
     except RoomNotAvailableError:
         raise HTTPException(status_code=409, detail="Room not available")
 
-@router.patch("/{id}/dates", status_code=status.HTTP_200_OK, summary=" ")
+@router.patch("/{id}/dates", status_code=status.HTTP_200_OK, response_model= ReservationUpdateResponse, summary=" ")
 def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
     try:
-        reservation_id = reservation_service.update_reservation_dates(
+        result = reservation_service.update_reservation_dates(
             id,
             payload.check_in,
             payload.check_out
         )
-        return {"reservation_id": reservation_id}
+        return result
 
     except InvalidReservationDatesError:
         raise HTTPException(status_code=422, detail="Check_out must be after check_in")
@@ -66,14 +66,14 @@ def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
     except RoomNotAvailableError:
         raise HTTPException(status_code=409, detail="Room not available")
 
-@router.patch("/{id}/status", status_code=status.HTTP_200_OK, summary=" ")
+@router.patch("/{id}/status", status_code=status.HTTP_200_OK, response_model= ReservationUpdateResponse, summary=" ")
 def update_reservation_status_endpoint(id:UUID, payload:ReservationStatusUpdate):
     try:
-        reservation_id = reservation_service.update_reservation_status(
+        result = reservation_service.update_reservation_status(
             id,
             payload.status
         )
-        return {"reservation_id": reservation_id}
+        return result
 
     except ReservationNotFoundError:
         raise HTTPException(status_code=404, detail="Reservation not found")
@@ -92,13 +92,13 @@ def get_reservation_endpoint(id:UUID):
         )
 
     return {
-        "reservation_id": reservation[0][0],
-        "customer_id": reservation[0][1],
-        "room_id": reservation[0][2],
-        "check_in": reservation[0][3],
-        "check_out": reservation[0][4],
-        "status": reservation[0][5],
-        "total_amount": reservation[0][6]
+        "reservation_id": reservation["id"],
+        "customer_id": reservation["customer_id"],
+        "room_id": reservation["room_id"],
+        "check_in": reservation["check_in"],
+        "check_out": reservation["check_out"],
+        "status": reservation["status"],
+        "total_amount": reservation["total_amount"]
     }
 
 @router.get("", status_code=status.HTTP_200_OK, summary=" ")
@@ -110,13 +110,13 @@ def list_reservations_endpoint():
     for reservation in reservations:
         response.append(
             {
-                "reservation_id": reservation[0],
-                "customer_id": reservation[1],
-                "room_id": reservation[2],
-                "check_in": reservation[3],
-                "check_out": reservation[4],
-                "status": reservation[5],
-                "total_amount": reservation[6]
+                "reservation_id": reservation["id"],
+                "customer_id": reservation["customer_id"],
+                "room_id": reservation["room_id"],
+                "check_in": reservation["check_in"],
+                "check_out": reservation["check_out"],
+                "status": reservation["status"],
+                "total_amount": reservation["total_amount"]
             }
         )
 

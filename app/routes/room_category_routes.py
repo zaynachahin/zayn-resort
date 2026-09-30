@@ -4,6 +4,7 @@ from app.repositories.room_category_repository import(
     get_room_category_by_id,
     get_room_category_by_name,
     get_room_category_by_name_excluding_id,
+    get_room_category_by_id_including_deleted,
     create_room_category,
     update_room_category,
     soft_delete_room_category,
@@ -12,7 +13,9 @@ from app.repositories.room_category_repository import(
 from app.schemas.room_category_schema import (
     RoomCategoryCreate,
     RoomCategoryUpdate,
-    RoomCategoryPatch
+    RoomCategoryPatch,
+    RoomCategoryCreateResponse,
+    RoomCategoryUpdateResponse
 )
 from uuid import UUID
 
@@ -21,7 +24,7 @@ router = APIRouter(
     tags = ["Room Categories"],
 )
 
-@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=RoomCategoryCreateResponse, summary=" ")
 def create_room_category_endpoint(room_category:RoomCategoryCreate):
     existing_room_category = get_room_category_by_name(room_category.name)
     
@@ -31,16 +34,13 @@ def create_room_category_endpoint(room_category:RoomCategoryCreate):
             detail= "Room Category already exists"
         )
 
-    room_category_id = create_room_category(
+    result = create_room_category(
         room_category.name,
         room_category.capacity,
         room_category.daily_rate
     )
 
-    return {
-        "message":"Room Category Created",
-        "room_category_id": room_category_id
-    }
+    return result
 
 
 @router.get("", status_code=status.HTTP_200_OK, summary=" ")
@@ -52,10 +52,10 @@ def list_room_categories_endpoint():
     for room_category in room_categories:
         response.append(
             {
-                "room_category_id": room_category[0],
-                "name": room_category[1],
-                "capacity": room_category[2],
-                "daily_rate": room_category[3]
+                "room_category_id": room_category["id"],
+                "name": room_category["name"],
+                "capacity": room_category["capacity"],
+                "daily_rate": room_category["daily_rate"]
             }
         )
 
@@ -72,13 +72,13 @@ def get_room_category_endpoint(id:UUID):
         )
 
     return {
-        "room_category_id": room_category[0][0],
-        "name": room_category[0][1],
-        "capacity": room_category[0][2],
-        "daily_rate": room_category[0][3]
+        "room_category_id": room_category["id"],
+        "name": room_category["name"],
+        "capacity": room_category["capacity"],
+        "daily_rate": room_category["daily_rate"]
     }
 
-@router.put("/{id}", status_code=status.HTTP_200_OK, summary=" ")
+@router.put("/{id}", status_code=status.HTTP_200_OK, response_model=RoomCategoryUpdateResponse, summary=" ")
 def update_room_category_endpoint(id:UUID, room_category:RoomCategoryUpdate):
     registered_room_category = get_room_category_by_id(id)
 
@@ -96,34 +96,30 @@ def update_room_category_endpoint(id:UUID, room_category:RoomCategoryUpdate):
             detail="Room Category exists"
         )
 
-    updated_room_category = update_room_category(
+    result = update_room_category(
         id,
         room_category.name,
         room_category.capacity,
         room_category.daily_rate
     )
 
-    return {
-        "message":"Room category updated",
-        "room_category_id": updated_room_category[0][0]
-    }
+    return result
 
-@router.patch("/{id}", status_code=status.HTTP_200_OK, summary=" ")
+@router.patch("/{id}", status_code=status.HTTP_200_OK, response_model=RoomCategoryUpdateResponse, summary=" ")
 def patch_room_category_endpoint(id:UUID, room_category: RoomCategoryPatch):
-    fields = room_category.model_dump(exclude_unset=True)
-
-    if not fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No input provided"
-        )
-
     registered_room_category = get_room_category_by_id(id)
 
     if not registered_room_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Room Category does not exist"
+        )
+
+    fields = room_category.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No input provided"
         )
 
     if "name" in fields:
@@ -135,19 +131,22 @@ def patch_room_category_endpoint(id:UUID, room_category: RoomCategoryPatch):
                 detail="Room Category exists"
             )
 
-    updated_room_category = patch_room_category(id, fields)
+    result = patch_room_category(id, fields)
 
-    return {
-        "message":"Room category updated",
-        "room_category_id": updated_room_category[0][0]
-    }
+    return result
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")
 def soft_delete_room_category_endpoint(id:UUID):
-    room_category = soft_delete_room_category(id)
+    existing_room_category = get_room_category_by_id_including_deleted(id)
 
-    if not room_category:
+    if not existing_room_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Room category not found or Room category is deactivated"
+            detail="Room category not found"
+        )
+    room_category = soft_delete_room_category(id)
+    if not room_category:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Room category is already deleted"
         )

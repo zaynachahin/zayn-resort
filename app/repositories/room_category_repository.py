@@ -7,7 +7,7 @@ def list_room_categories():
     WHERE deleted_at IS NULL;
     """
 
-    room_categories = execute_query(query, fetch=True)
+    room_categories = execute_query(query, fetch_all=True)
     return room_categories
 
 def get_room_category_by_id(id):
@@ -19,7 +19,7 @@ def get_room_category_by_id(id):
 
     params = (id,)
 
-    room_category = execute_query(query, params, fetch=True)
+    room_category = execute_query(query, params, fetch_one=True)
     return room_category
 
 def get_room_category_by_name(name):
@@ -31,7 +31,7 @@ def get_room_category_by_name(name):
 
     params = (name,)
 
-    room_category = execute_query(query, params, fetch=True)
+    room_category = execute_query(query, params, fetch_one=True)
     return room_category
 
 def get_room_category_by_name_excluding_id(name, id):
@@ -45,8 +45,18 @@ def get_room_category_by_name_excluding_id(name, id):
 
     params = (name,id)
 
-    room_category = execute_query(query, params, fetch=True)
+    room_category = execute_query(query, params, fetch_one=True)
     return room_category
+
+def get_room_category_by_id_including_deleted(id):
+    query = """
+    SELECT id, name, capacity, daily_rate
+    FROM room_categories
+    WHERE id = %s;
+    """
+    params = (id,)
+    result = execute_query(query, params, fetch_one=True)
+    return result
 
 def create_room_category(name, capacity, daily_rate):
     query = """
@@ -60,7 +70,7 @@ def create_room_category(name, capacity, daily_rate):
     %s,
     %s
     )
-    RETURNING id;
+    RETURNING id, name, capacity, daily_rate, created_at;
     """
 
     params = (
@@ -69,8 +79,8 @@ def create_room_category(name, capacity, daily_rate):
         daily_rate
     )
 
-    result = execute_query(query, params, fetch=True)
-    return result[0][0]
+    result = execute_query(query, params, fetch_one=True)
+    return result
 
 def update_room_category(id, name, capacity, daily_rate):
     query = """
@@ -80,8 +90,8 @@ def update_room_category(id, name, capacity, daily_rate):
     capacity = %s,
     daily_rate = %s,
     updated_at = NOW()
-    WHERE id = %s
-    RETURNING id;
+    WHERE id = %s AND deleted_at IS NULL
+    RETURNING id, name, capacity, daily_rate, updated_at;
     """
 
     params = (
@@ -91,7 +101,7 @@ def update_room_category(id, name, capacity, daily_rate):
         id
     )
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def soft_delete_room_category(id):
@@ -99,12 +109,12 @@ def soft_delete_room_category(id):
     UPDATE room_categories
     SET deleted_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id;
+    RETURNING id, deleted_at;
     """
 
     params = (id,)
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 allowed_room_category_columns = {"name", "capacity", "daily_rate"}
@@ -123,11 +133,11 @@ def patch_room_category(id,fields: dict):
     query = f"""
     UPDATE room_categories
     SET {set_clause}, updated_at = NOW()
-    WHERE id = %s
-    RETURNING id;
+    WHERE id = %s AND deleted_at IS NULL
+    RETURNING id, name, capacity, daily_rate, updated_at;
     """
 
     params.append(id)
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
