@@ -15,20 +15,22 @@ class DatabaseConfig:
             user = self.user,
             password = self.password,
             host = self.host,
-            port = self.port
+            port = self.port,
+            row_factory=psycopg.rows.dict_row
         )
     
 
 db = DatabaseConfig()
 
 
-def execute_query(query, params=None, fetch=False):
+def execute_query(query, params=None, fetch_one=False, fetch_all=False):
     with db.open_connection() as conn:
         with conn.cursor() as cur:
             if params is not None:
                 cur.execute(query, params)
             else:
                 cur.execute(query)
-            
-            if fetch:
+            if fetch_one:
+                return cur.fetchone()
+            if fetch_all:
                 return cur.fetchall()
