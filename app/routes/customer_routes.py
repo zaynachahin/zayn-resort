@@ -10,7 +10,7 @@ from app.repositories.customer_repository import (
     patch_customer,
     soft_delete_customer
 )
-from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, CustomerPatch
+from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, CustomerPatch, CustomerCreateResponse, CustomerUpdateResponse
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
@@ -21,11 +21,11 @@ def get_customers():
     response = []
     for customer in customers:
         response.append({
-            "customer_id": customer[0],
-            "full_name": customer[1],
-            "date_of_birth": customer[2],
-            "cpf": customer[3],
-            "newsletter_opt_in": customer[4],
+            "customer_id": customer["id"],
+            "full_name": customer["full_name"],
+            "date_of_birth": customer["date_of_birth"],
+            "cpf": customer["cpf"],
+            "newsletter_opt_in": customer["newsletter_opt_in"],
         })
     return response
 
@@ -36,49 +36,49 @@ def get_customer(customer_id: UUID):
     if not customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     return {
-        "customer_id": customer[0][0],
-        "full_name": customer[0][1],
-        "date_of_birth": customer[0][2],
-        "cpf": customer[0][3],
-        "newsletter_opt_in": customer[0][4],
+        "customer_id": customer["id"],
+        "full_name": customer["full_name"],
+        "date_of_birth": customer["date_of_birth"],
+        "cpf": customer["cpf"],
+        "newsletter_opt_in": customer["newsletter_opt_in"],
     }
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=CustomerCreateResponse, summary=" ")
 def create_customer_endpoint(customer: CustomerCreate):
     existing_customer = get_customer_by_cpf(customer.cpf)
     if existing_customer:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CPF is registered")
 
-    customer_id = create_customer(
+    result = create_customer(
         customer.full_name,
         customer.date_of_birth,
         customer.cpf,
         customer.newsletter_opt_in
     )
-    return {"message": "Customer created", "customer_id": customer_id}
+    return result
 
 
-@router.put("/{customer_id}", status_code=status.HTTP_200_OK, summary=" ")
+@router.put("/{customer_id}", status_code=status.HTTP_200_OK, response_model=CustomerUpdateResponse, summary=" ")
 def update_customer_endpoint(customer_id: UUID, customer: CustomerUpdate):
     existing_cpf = get_customer_by_cpf_excluding_id(customer.cpf, customer_id)
     if existing_cpf:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CPF is registered")
 
-    updated_customer = update_customer(
+    result = update_customer(
         customer_id,
         customer.full_name,
         customer.date_of_birth,
         customer.cpf,
         customer.newsletter_opt_in
     )
-    if not updated_customer:
+    if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
 
-    return {"message": "Customer updated", "customer_id": updated_customer[0][0]}
+    return result
 
 
-@router.patch("/{customer_id}", status_code=status.HTTP_200_OK, summary=" ")
+@router.patch("/{customer_id}", status_code=status.HTTP_200_OK, response_model=CustomerUpdateResponse, summary=" ")
 def patch_customer_endpoint(customer_id: UUID, customer: CustomerPatch):
     fields = customer.model_dump(exclude_unset=True)
     if not fields:
@@ -93,8 +93,8 @@ def patch_customer_endpoint(customer_id: UUID, customer: CustomerPatch):
         if existing_customer:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CPF is registered")
 
-    updated_customer = patch_customer(customer_id, fields)
-    return {"message": "Customer updated", "customer_id": updated_customer[0][0]}
+    result = patch_customer(customer_id, fields)
+    return result
 
 
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")

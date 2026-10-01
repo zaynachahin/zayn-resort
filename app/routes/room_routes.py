@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from uuid import UUID
-from app.schemas.rooms_schema import RoomCreate, RoomUpdate, RoomPatch
+from app.schemas.rooms_schema import RoomCreate, RoomUpdate, RoomPatch, RoomCreateResponse, RoomUpdateResponse
 from app.repositories import room_repository
 from app.repositories.room_category_repository import get_room_category_by_id
 
@@ -14,11 +14,11 @@ def list_rooms():
     response = []
     for room in rooms:
         response.append({
-            "room_id": room[0],
-            "number": room[1],
-            "name": room[2],
-            "description": room[3],
-            "room_category_id": room[4]
+            "room_id": room["id"],
+            "number": room["number"],
+            "name": room["name"],
+            "description": room["description"],
+            "room_category_id": room["room_category_id"]
         })
     return response
 
@@ -29,15 +29,15 @@ def get_room(id: UUID):
     if not room:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
     return {
-        "room_id": room[0][0],
-        "number": room[0][1],
-        "name": room[0][2],
-        "description": room[0][3],
-        "room_category_id": room[0][4]
+        "room_id": room["id"],
+        "number": room["number"],
+        "name": room["name"],
+        "description": room["description"],
+        "room_category_id": room["room_category_id"]
     }
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, summary=" ")
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=RoomCreateResponse, summary=" ")
 def create_room(payload: RoomCreate):
     category = get_room_category_by_id(payload.room_category_id)
     if not category:
@@ -47,16 +47,16 @@ def create_room(payload: RoomCreate):
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room number already exists")
 
-    room_id = room_repository.create_room(
+    result = room_repository.create_room(
         number=payload.number,
         name=payload.name,
         description=payload.description,
         room_category_id=payload.room_category_id
     )
-    return {"room_id": room_id}
+    return result
 
 
-@router.put("/{id}", status_code=status.HTTP_200_OK, summary=" ")
+@router.put("/{id}", status_code=status.HTTP_200_OK, response_model=RoomUpdateResponse, summary=" ")
 def update_room(id: UUID, payload: RoomUpdate):
     room = room_repository.get_room_by_id(id)
     if not room:
@@ -70,17 +70,17 @@ def update_room(id: UUID, payload: RoomUpdate):
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room number already exists")
 
-    room_repository.update_room(
+    result = room_repository.update_room(
         id=id,
         number=payload.number,
         name=payload.name,
         description=payload.description,
         room_category_id=payload.room_category_id
     )
-    return {"message": "Room updated successfully"}
+    return result
 
 
-@router.patch("/{id}", status_code=status.HTTP_200_OK, summary=" ")
+@router.patch("/{id}", status_code=status.HTTP_200_OK, response_model=RoomUpdateResponse, summary=" ")
 def patch_room(id: UUID, payload: RoomPatch):
     room = room_repository.get_room_by_id(id)
     if not room:
@@ -100,8 +100,8 @@ def patch_room(id: UUID, payload: RoomPatch):
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room number already exists")
 
-    room_repository.patch_room(id=id, fields=fields)
-    return {"message": "Room updated successfully"}
+    result = room_repository.patch_room(id=id, fields=fields)
+    return result
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")

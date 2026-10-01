@@ -9,7 +9,7 @@ def get_reservation_by_id(id):
 
     params= (id,)
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_one=True)
     return result
 
 def list_reservations():
@@ -19,7 +19,7 @@ def list_reservations():
     WHERE deleted_at IS NULL;
     """
 
-    result = execute_query(query, fetch=True)
+    result = execute_query(query, fetch_all=True)
     return result
 
 def get_conflicting_reservations(room_id, check_out, check_in):
@@ -35,7 +35,7 @@ def get_conflicting_reservations(room_id, check_out, check_in):
 
     params = (room_id, check_out, check_in)
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_all=True)
     return result
 
 def get_conflicting_reservations_excluding_id(room_id, id, check_out, check_in):
@@ -52,56 +52,56 @@ def get_conflicting_reservations_excluding_id(room_id, id, check_out, check_in):
 
     params = (room_id, id, check_out, check_in)
 
-    result = execute_query(query, params, fetch=True)
+    result = execute_query(query, params, fetch_all=True)
     return result
 
 def create_reservation(customer_id, room_id, check_in, check_out, total_amount):
     query = """
     INSERT INTO reservations(customer_id, room_id, check_in, check_out, total_amount)
     VALUES(%s, %s, %s, %s, %s)
-    RETURNING id;
+    RETURNING id, customer_id, room_id, check_in, check_out, status, total_amount, created_at;
     """
 
     params = (customer_id, room_id, check_in, check_out, total_amount)
 
-    result = execute_query(query, params, fetch=True)
-    return result[0][0]
+    result = execute_query(query, params, fetch_one=True)
+    return result
 
 def update_reservation_dates(id, check_in, check_out, total_amount):
     query = """
     UPDATE reservations
     SET check_in = %s, check_out = %s, total_amount = %s, updated_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id;
+    RETURNING id, customer_id, room_id, check_in, check_out, status, total_amount, updated_at;
     """
 
     params = (check_in, check_out, total_amount, id)
 
-    result = execute_query(query, params, fetch=True)
-    return result[0][0]
+    result = execute_query(query, params, fetch_one=True)
+    return result
 
 def update_reservation_status(id, status):
     query = """
     UPDATE reservations
     SET status = %s, updated_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id;
+    RETURNING id, customer_id, room_id, check_in, check_out, status, total_amount, updated_at;
     """
 
     params = (status, id)
 
-    result = execute_query(query, params, fetch=True)
-    return result[0][0]
+    result = execute_query(query, params, fetch_one=True)
+    return result
 
 def soft_delete_reservation(id):
     query = """
     UPDATE reservations
     SET deleted_at = NOW()
     WHERE id = %s AND deleted_at IS NULL
-    RETURNING id;
+    RETURNING id, deleted_at;
     """
 
     params = (id,)
 
-    result = execute_query(query, params, fetch=True)
-    return result[0][0]
+    result = execute_query(query, params, fetch_one=True)
+    return result

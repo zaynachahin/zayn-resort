@@ -6,39 +6,43 @@ import pytest
 fake_customer_id = "00000000-0000-0000-0000-000000000001"
 non_existent_customer_id = "00000000-0000-0000-0000-000000000002"
 
-fake_customers = [
-    (
-        "00000000-0000-0000-0000-000000000001",
-        "Test User",
-        "1999-01-01",
-        "11111111111",
-        True,
-    ),
-]
-
-fake_existing_customer = [
-    ("00000000-0000-0000-0000-000000000001",),
-]
-
-another_customer_with_cpf = [
-    ("00000000-0000-0000-0000-000000000002",),
-]
-
-fake_updated_customer = [
-    ("00000000-0000-0000-0000-000000000001",),
-]
-
-fake_deleted_customer = [
-    ("00000000-0000-0000-0000-000000000001",),
-]
-
-expected_customer_response = {
-    "customer_id": "00000000-0000-0000-0000-000000000001",
+fake_customer_row = {
+    "id": fake_customer_id,
     "full_name": "Test User",
     "date_of_birth": "1999-01-01",
     "cpf": "11111111111",
     "newsletter_opt_in": True,
 }
+
+fake_customers = [fake_customer_row]
+
+fake_existing_customer = {"id": fake_customer_id}
+another_customer_with_cpf = {"id": "00000000-0000-0000-0000-000000000002"}
+
+
+fake_created_customer = {
+    **fake_customer_row,
+    "created_at": "2024-01-01T00:00:00",
+}
+
+fake_updated_customer = {
+    **fake_customer_row,
+    "updated_at": "2024-01-02T00:00:00",
+}
+
+fake_deleted_customer = {
+    "id": fake_customer_id,
+    "deleted_at": "2024-01-03T00:00:00",
+}
+
+expected_customer_get_response = {
+    "customer_id": fake_customer_id,
+    "full_name": "Test User",
+    "date_of_birth": "1999-01-01",
+    "cpf": "11111111111",
+    "newsletter_opt_in": True,
+}
+
 
 @pytest.fixture
 def valid_customer_payload():
@@ -64,14 +68,14 @@ def test_get_customers_returns_200(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [expected_customer_response]
+    assert response.json() == [expected_customer_get_response]
 
 
 def test_get_customer_by_id_returns_200(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_id",
-        lambda customer_id: fake_customers,
+        lambda customer_id: fake_customer_row,
     )
 
     # Act
@@ -79,14 +83,14 @@ def test_get_customer_by_id_returns_200(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == expected_customer_response
+    assert response.json() == expected_customer_get_response
 
 
 def test_get_customer_by_id_returns_404(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_id",
-        lambda customer_id: [],
+        lambda customer_id: None,
     )
 
     # Act
@@ -111,11 +115,11 @@ def test_create_customer_returns_201_when_cpf_doesnt_exist(monkeypatch, client, 
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_cpf",
-        lambda cpf: [],
+        lambda cpf: None,
     )
     monkeypatch.setattr(
         "app.routes.customer_routes.create_customer",
-        lambda full_name, date_of_birth, cpf, newsletter_opt_in: fake_customer_id,
+        lambda full_name, date_of_birth, cpf, newsletter_opt_in: fake_created_customer,
     )
 
     # Act
@@ -123,8 +127,7 @@ def test_create_customer_returns_201_when_cpf_doesnt_exist(monkeypatch, client, 
 
     # Assert
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()["message"] == "Customer created"
-    assert response.json()["customer_id"] == fake_customer_id
+    assert response.json() == fake_created_customer
 
 
 def test_create_customer_returns_409_when_cpf_exists(monkeypatch, client, valid_customer_payload):
@@ -182,7 +185,7 @@ def test_update_customer_returns_200(monkeypatch, client, valid_customer_payload
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
-        lambda cpf, customer_id: [],
+        lambda cpf, customer_id: None,
     )
     monkeypatch.setattr(
         "app.routes.customer_routes.update_customer",
@@ -194,19 +197,18 @@ def test_update_customer_returns_200(monkeypatch, client, valid_customer_payload
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"] == "Customer updated"
-    assert response.json()["customer_id"] == fake_customer_id
+    assert response.json() == fake_updated_customer
 
 
-def test_update_customer_returns_404_when_not_exists(monkeypatch, client, valid_customer_payload):
+def test_update_customer_returns_404_when_customer_does_not_exist(monkeypatch, client, valid_customer_payload):
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
-        lambda cpf, customer_id: [],
+        lambda cpf, customer_id: None,
     )
     monkeypatch.setattr(
         "app.routes.customer_routes.update_customer",
-        lambda customer_id, full_name, date_of_birth, cpf, newsletter_opt_in: [],
+        lambda customer_id, full_name, date_of_birth, cpf, newsletter_opt_in: None,
     )
 
     # Act
@@ -221,7 +223,7 @@ def test_update_customer_returns_409_when_cpf_belongs_to_another(monkeypatch, cl
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
-        lambda cpf, customer_id: fake_existing_customer,
+        lambda cpf, customer_id: another_customer_with_cpf,
     )
 
     # Act
@@ -279,7 +281,7 @@ def test_patch_customer_returns_200(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_id",
-        lambda customer_id: fake_existing_customer,
+        lambda customer_id: fake_customer_row,
     )
     monkeypatch.setattr(
         "app.routes.customer_routes.patch_customer",
@@ -291,8 +293,7 @@ def test_patch_customer_returns_200(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"] == "Customer updated"
-    assert response.json()["customer_id"] == fake_customer_id
+    assert response.json() == fake_updated_customer
 
 
 def test_patch_customer_returns_400_when_body_is_empty(client):
@@ -304,11 +305,11 @@ def test_patch_customer_returns_400_when_body_is_empty(client):
     assert response.json()["detail"] == "No input provided"
 
 
-def test_patch_customer_returns_404_when_not_exists(monkeypatch, client):
+def test_patch_customer_returns_404_when_customer_does_not_exist(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_id",
-        lambda customer_id: [],
+        lambda customer_id: None,
     )
 
     # Act
@@ -323,7 +324,7 @@ def test_patch_customer_returns_409_when_cpf_belongs_to_another(monkeypatch, cli
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_id",
-        lambda customer_id: fake_existing_customer,
+        lambda customer_id: fake_customer_row,
     )
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
@@ -381,11 +382,11 @@ def test_delete_customer_returns_204(monkeypatch, client):
     assert response.content == b""
 
 
-def test_delete_customer_returns_404_when_not_exists(monkeypatch, client):
+def test_delete_customer_returns_404_when_customer_does_not_exist(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.customer_routes.soft_delete_customer",
-        lambda customer_id: [],
+        lambda customer_id: None,
     )
 
     # Act
