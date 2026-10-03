@@ -27,7 +27,7 @@ def get_room_by_number(number):
     query = """
     SELECT id, number, name, description, room_category_id
     FROM rooms
-    WHERE number = %s AND deleted_at IS NULL
+    WHERE LOWER(number) = LOWER(%s) AND deleted_at IS NULL
     """
     params = (number,)
     result = execute_query(query, params, fetch_one=True)
@@ -37,7 +37,7 @@ def get_room_by_number_excluding_id(number, id):
     query = """
     SELECT id, number, name, description, room_category_id
     FROM rooms
-    WHERE number = %s AND id != %s AND deleted_at IS NULL
+    WHERE LOWER(number) = LOWER(%s) AND id != %s AND deleted_at IS NULL
     """
     params = (number, id)
     result = execute_query(query, params, fetch_one=True)
