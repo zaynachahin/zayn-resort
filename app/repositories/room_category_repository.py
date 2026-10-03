@@ -26,7 +26,7 @@ def get_room_category_by_name(name):
     query = """
     SELECT id
     FROM room_categories
-    WHERE name = %s AND deleted_at IS NULL;
+    WHERE LOWER(name) = LOWER(%s) AND deleted_at IS NULL;
     """
 
     params = (name,)
@@ -38,7 +38,7 @@ def get_room_category_by_name_excluding_id(name, id):
     query = """
     SELECT id
     FROM room_categories
-    WHERE name = %s
+    WHERE LOWER(name) = LOWER(%s)
     AND id != %s
     AND deleted_at IS NULL;
     """
