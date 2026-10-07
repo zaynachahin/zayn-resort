@@ -85,7 +85,7 @@ def update_room_category_endpoint(id:UUID, room_category:RoomCategoryUpdate):
     if not registered_room_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Room Category does not exist"
+            detail="Room Category not found"
         )
 
     existing_room_category = get_room_category_by_name_excluding_id(room_category.name, id)
@@ -102,7 +102,12 @@ def update_room_category_endpoint(id:UUID, room_category:RoomCategoryUpdate):
         room_category.capacity,
         room_category.daily_rate
     )
-
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Room Category not found"
+        )
+    
     return result
 
 @router.patch("/{id}", status_code=status.HTTP_200_OK, response_model=RoomCategoryUpdateResponse, summary=" ")
@@ -112,7 +117,7 @@ def patch_room_category_endpoint(id:UUID, room_category: RoomCategoryPatch):
     if not registered_room_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Room Category does not exist"
+            detail="Room Category not found"
         )
 
     fields = room_category.model_dump(exclude_unset=True)
@@ -132,7 +137,12 @@ def patch_room_category_endpoint(id:UUID, room_category: RoomCategoryPatch):
             )
 
     result = patch_room_category(id, fields)
-
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Room Category not found"
+        )
+    
     return result
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")

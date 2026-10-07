@@ -3,6 +3,7 @@ from uuid import UUID
 from app.repositories.customer_repository import (
     list_customers,
     get_customer_by_id,
+    get_customer_by_id_including_deleted,
     get_customer_by_cpf,
     get_customer_by_cpf_excluding_id,
     create_customer,
@@ -61,6 +62,10 @@ def create_customer_endpoint(customer: CustomerCreate):
 
 @router.put("/{customer_id}", status_code=status.HTTP_200_OK, response_model=CustomerUpdateResponse, summary=" ")
 def update_customer_endpoint(customer_id: UUID, customer: CustomerUpdate):
+    registered_customer = get_customer_by_id(customer_id)
+    if not registered_customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    
     existing_cpf = get_customer_by_cpf_excluding_id(customer.cpf, customer_id)
     if existing_cpf:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CPF is registered")
@@ -80,13 +85,13 @@ def update_customer_endpoint(customer_id: UUID, customer: CustomerUpdate):
 
 @router.patch("/{customer_id}", status_code=status.HTTP_200_OK, response_model=CustomerUpdateResponse, summary=" ")
 def patch_customer_endpoint(customer_id: UUID, customer: CustomerPatch):
-    fields = customer.model_dump(exclude_unset=True)
-    if not fields:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No input provided")
-
     registered_customer = get_customer_by_id(customer_id)
     if not registered_customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+
+    fields = customer.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No input provided")
 
     if "cpf" in fields:
         existing_customer = get_customer_by_cpf_excluding_id(fields["cpf"], customer_id)
@@ -94,14 +99,24 @@ def patch_customer_endpoint(customer_id: UUID, customer: CustomerPatch):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CPF is registered")
 
     result = patch_customer(customer_id, fields)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
+    
     return result
 
 
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT, summary=" ")
 def soft_delete_customer_endpoint(customer_id: UUID):
-    deleted_customer = soft_delete_customer(customer_id)
-    if not deleted_customer:
+    existing_customer = get_customer_by_id_including_deleted(customer_id)
+    if not existing_customer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found or customer is deactivated"
+            detail="Customer not found"
+        )
+
+    customer = soft_delete_customer(customer_id)
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Customer is already deleted"
         )

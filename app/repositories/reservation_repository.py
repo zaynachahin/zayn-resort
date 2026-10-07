@@ -12,6 +12,18 @@ def get_reservation_by_id(id):
     result = execute_query(query, params, fetch_one=True)
     return result
 
+def get_reservation_by_id_including_deleted(id):
+    query= """
+    SELECT id, customer_id, room_id, check_in, check_out, status, total_amount
+    FROM reservations
+    WHERE id = %s;
+    """
+
+    params= (id,)
+
+    result = execute_query(query, params, fetch_one=True)
+    return result
+
 def list_reservations():
     query = """
     SELECT id, customer_id, room_id, check_in, check_out, status, total_amount

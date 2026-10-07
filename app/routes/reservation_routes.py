@@ -5,12 +5,14 @@ from app.services import reservation_service
 from app.repositories import reservation_repository
 from app.services.reservation_exceptions import (
     CustomerNotFoundError,
+    RoomCategoryNotFoundError,
     RoomNotFoundError,
     RoomNotAvailableError,
     ReservationNotFoundError,
     InvalidStatusTransitionError,
     InvalidReservationOperationError,
-    InvalidReservationDatesError
+    InvalidReservationDatesError,
+    ReservationAlreadyDeletedError
 )
 
 router = APIRouter(
@@ -38,6 +40,9 @@ def create_reservation_endpoint(payload: ReservationCreate):
     except RoomNotFoundError:
         raise HTTPException(status_code=404, detail="Room not found")
 
+    except RoomCategoryNotFoundError:
+        raise HTTPException(status_code=404, detail="Room Category not found")
+
     except RoomNotAvailableError:
         raise HTTPException(status_code=409, detail="Room not available")
 
@@ -62,6 +67,9 @@ def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
 
     except RoomNotFoundError:
         raise HTTPException(status_code=404, detail="Room not found")
+
+    except RoomCategoryNotFoundError:
+        raise HTTPException(status_code=404, detail="Room Category not found")
 
     except RoomNotAvailableError:
         raise HTTPException(status_code=409, detail="Room not available")
@@ -126,5 +134,9 @@ def list_reservations_endpoint():
 def delete_reservation_endpoint(id: UUID):
     try:
         reservation_service.soft_delete_reservation(id)
+
     except ReservationNotFoundError:
         raise HTTPException(status_code=404, detail="Reservation not found")
+
+    except ReservationAlreadyDeletedError:
+        raise HTTPException(status_code=409, detail="Reservation is already deleted")

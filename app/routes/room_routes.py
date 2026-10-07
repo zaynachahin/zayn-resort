@@ -77,6 +77,9 @@ def update_room(id: UUID, payload: RoomUpdate):
         description=payload.description,
         room_category_id=payload.room_category_id
     )
+    if not result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+    
     return result
 
 
@@ -101,6 +104,10 @@ def patch_room(id: UUID, payload: RoomPatch):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room number already exists")
 
     result = room_repository.patch_room(id=id, fields=fields)
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+    
     return result
 
 

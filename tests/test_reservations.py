@@ -371,7 +371,7 @@ def test_update_reservation_status_returns_409_for_invalid_transition(monkeypatc
 
 def test_delete_reservation_returns_204(monkeypatch, client):
     # Arrange
-    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id", lambda id: fake_reservation_row)
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: fake_reservation_row)
     monkeypatch.setattr("app.services.reservation_service.reservation_repository.soft_delete_reservation", lambda id: {"id": fake_reservation_id, "deleted_at": "2024-01-03T00:00:00"})
 
     # Act
@@ -382,9 +382,9 @@ def test_delete_reservation_returns_204(monkeypatch, client):
     assert response.content == b""
 
 
-def test_delete_reservation_returns_404(monkeypatch, client):
+def test_delete_reservation_returns_404_when_not_exists(monkeypatch, client):
     # Arrange
-    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id", lambda id: None)
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: None)
 
     # Act
     response = client.delete(f"/reservations/{fake_reservation_id}")
@@ -394,9 +394,14 @@ def test_delete_reservation_returns_404(monkeypatch, client):
     assert response.json()["detail"] == "Reservation not found"
 
 
-def test_delete_reservation_returns_422_when_id_invalid(client):
+def test_delete_reservation_returns_409_when_already_deleted(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: fake_reservation_row)
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.soft_delete_reservation", lambda id: None)
+
     # Act
-    response = client.delete("/reservations/abc")
+    response = client.delete(f"/reservations/{fake_reservation_id}")
 
     # Assert
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Reservation is already deleted"
