@@ -10,12 +10,14 @@ from app.repositories.room_category_repository import(
 )
 from app.services.reservation_exceptions import (
     CustomerNotFoundError,
+    RoomCategoryNotFoundError,
     RoomNotFoundError,
     RoomNotAvailableError,
     ReservationNotFoundError,
     InvalidStatusTransitionError,
     InvalidReservationOperationError,
-    InvalidReservationDatesError
+    InvalidReservationDatesError,
+    ReservationAlreadyDeletedError
 )
 from app.schemas.reservations_schema import ReservationStatus
 
@@ -36,13 +38,15 @@ def create_reservation(customer_id, room_id, check_in, check_out):
     if not room:
         raise RoomNotFoundError()
 
+    room_category = get_room_category_by_id(room["room_category_id"])
+    if not room_category:
+        raise RoomCategoryNotFoundError()
+    
     conflicting_reservation = reservation_repository.get_conflicting_reservations(room_id, check_out, check_in)
 
     if conflicting_reservation:
         raise RoomNotAvailableError()
 
-    room_category_id = room["room_category_id"]
-    room_category = get_room_category_by_id(room_category_id)
     daily_rate = room_category["daily_rate"]
     reservation_days = (check_out - check_in).days
     total_amount = daily_rate * reservation_days
@@ -69,18 +73,23 @@ def update_reservation_dates(id, check_in, check_out):
     if not room:
         raise RoomNotFoundError()
 
+    room_category = get_room_category_by_id(room["room_category_id"])
+    if not room_category:
+        raise RoomCategoryNotFoundError()
+
     conflicting_reservation = reservation_repository.get_conflicting_reservations_excluding_id(room_id, id, check_out, check_in)
 
     if conflicting_reservation:
         raise RoomNotAvailableError()
 
-    room_category_id = room["room_category_id"]
-    room_category = get_room_category_by_id(room_category_id)
     daily_rate = room_category["daily_rate"]
     reservation_days = (check_out - check_in).days
     total_amount = daily_rate * reservation_days
 
     result = reservation_repository.update_reservation_dates(id, check_in, check_out, total_amount)
+    if not result:
+        raise ReservationNotFoundError()
+    
     return result
 
 def update_reservation_status(id, status):
@@ -102,13 +111,18 @@ def update_reservation_status(id, status):
         raise InvalidStatusTransitionError()
 
     result = reservation_repository.update_reservation_status(id, status.value)
+    if not result:
+        raise ReservationNotFoundError()
+    
     return result
 
 def soft_delete_reservation(id):
-    reservation = reservation_repository.get_reservation_by_id(id)
-
+    reservation = reservation_repository.get_reservation_by_id_including_deleted(id)
     if not reservation:
         raise ReservationNotFoundError()
 
     result = reservation_repository.soft_delete_reservation(id)
+    if not result:
+        raise ReservationAlreadyDeletedError()
+    
     return result

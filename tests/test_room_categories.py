@@ -210,7 +210,7 @@ def test_update_room_category_returns_404_when_not_exists(monkeypatch, client, v
 
     # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Room Category does not exist"
+    assert response.json()["detail"] == "Room Category not found"
 
 
 def test_update_room_category_returns_409_when_name_belongs_to_another(monkeypatch, client, valid_room_category_payload):
@@ -280,7 +280,7 @@ def test_patch_room_category_returns_404_when_not_exists(monkeypatch, client):
 
     # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Room Category does not exist"
+    assert response.json()["detail"] == "Room Category not found"
 
 
 def test_patch_room_category_returns_409_when_name_belongs_to_another(monkeypatch, client):

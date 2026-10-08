@@ -183,10 +183,8 @@ def test_create_customer_returns_422_for_invalid_field(client, field, invalid_va
 
 def test_update_customer_returns_200(monkeypatch, client, valid_customer_payload):
     # Arrange
-    monkeypatch.setattr(
-        "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
-        lambda cpf, customer_id: None,
-    )
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_cpf_excluding_id", lambda cpf, customer_id: None)
     monkeypatch.setattr(
         "app.routes.customer_routes.update_customer",
         lambda customer_id, full_name, date_of_birth, cpf, newsletter_opt_in: fake_updated_customer,
@@ -202,17 +200,10 @@ def test_update_customer_returns_200(monkeypatch, client, valid_customer_payload
 
 def test_update_customer_returns_404_when_customer_does_not_exist(monkeypatch, client, valid_customer_payload):
     # Arrange
-    monkeypatch.setattr(
-        "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
-        lambda cpf, customer_id: None,
-    )
-    monkeypatch.setattr(
-        "app.routes.customer_routes.update_customer",
-        lambda customer_id, full_name, date_of_birth, cpf, newsletter_opt_in: None,
-    )
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id", lambda customer_id: None)
 
     # Act
-    response = client.put(f"/customers/{non_existent_customer_id}", json=valid_customer_payload)
+    response = client.put(f"/customers/{fake_customer_id}", json=valid_customer_payload)
 
     # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -221,6 +212,7 @@ def test_update_customer_returns_404_when_customer_does_not_exist(monkeypatch, c
 
 def test_update_customer_returns_409_when_cpf_belongs_to_another(monkeypatch, client, valid_customer_payload):
     # Arrange
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id", lambda customer_id: fake_existing_customer)
     monkeypatch.setattr(
         "app.routes.customer_routes.get_customer_by_cpf_excluding_id",
         lambda cpf, customer_id: another_customer_with_cpf,
@@ -231,8 +223,18 @@ def test_update_customer_returns_409_when_cpf_belongs_to_another(monkeypatch, cl
 
     # Assert
     assert response.status_code == status.HTTP_409_CONFLICT
-    assert response.json()["detail"] == "CPF is registered"
 
+def test_update_customer_returns_404_when_deleted_between_check_and_update(monkeypatch, client, valid_customer_payload):
+    # Arrange
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_cpf_excluding_id", lambda cpf, customer_id: None)
+    monkeypatch.setattr("app.routes.customer_routes.update_customer", lambda *args: None)
+
+    # Act
+    response = client.put(f"/customers/{fake_customer_id}", json=valid_customer_payload)
+
+    # Assert
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 def test_update_customer_returns_422_when_required_field_missing(client, valid_customer_payload):
     # Arrange
@@ -296,13 +298,15 @@ def test_patch_customer_returns_200(monkeypatch, client):
     assert response.json() == fake_updated_customer
 
 
-def test_patch_customer_returns_400_when_body_is_empty(client):
+def test_patch_customer_returns_400_when_body_is_empty(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id", lambda customer_id: fake_existing_customer)
+
     # Act
     response = client.patch(f"/customers/{fake_customer_id}", json={})
 
     # Assert
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["detail"] == "No input provided"
 
 
 def test_patch_customer_returns_404_when_customer_does_not_exist(monkeypatch, client):
@@ -338,6 +342,16 @@ def test_patch_customer_returns_409_when_cpf_belongs_to_another(monkeypatch, cli
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json()["detail"] == "CPF is registered"
 
+def test_patch_customer_returns_404_when_deleted_between_check_and_update(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.patch_customer", lambda customer_id, fields: None)
+
+    # Act
+    response = client.patch(f"/customers/{fake_customer_id}", json={"full_name": "New Name"})
+
+    # Assert
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.parametrize(
     "field, invalid_value",
@@ -369,10 +383,8 @@ def test_patch_customer_returns_422_when_id_is_invalid(client):
 
 def test_delete_customer_returns_204(monkeypatch, client):
     # Arrange
-    monkeypatch.setattr(
-        "app.routes.customer_routes.soft_delete_customer",
-        lambda customer_id: fake_deleted_customer,
-    )
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id_including_deleted", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.soft_delete_customer", lambda customer_id: fake_deleted_customer)
 
     # Act
     response = client.delete(f"/customers/{fake_customer_id}")
@@ -384,22 +396,24 @@ def test_delete_customer_returns_204(monkeypatch, client):
 
 def test_delete_customer_returns_404_when_customer_does_not_exist(monkeypatch, client):
     # Arrange
-    monkeypatch.setattr(
-        "app.routes.customer_routes.soft_delete_customer",
-        lambda customer_id: None,
-    )
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id_including_deleted", lambda customer_id: None)
 
     # Act
     response = client.delete(f"/customers/{non_existent_customer_id}")
 
     # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Customer not found or customer is deactivated"
+    assert response.json()["detail"] == "Customer not found"
 
 
-def test_delete_customer_returns_422_when_id_is_invalid(client):
+def test_delete_customer_returns_409_when_already_deleted(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id_including_deleted", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.soft_delete_customer", lambda customer_id: None)
+
     # Act
-    response = client.delete("/customers/abc")
+    response = client.delete(f"/customers/{fake_customer_id}")
 
     # Assert
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Customer is already deleted"

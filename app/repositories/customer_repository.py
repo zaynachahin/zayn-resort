@@ -23,6 +23,18 @@ def get_customer_by_id(customer_id):
     customer = execute_query(query, params, fetch_one=True)
     return customer
 
+def get_customer_by_id_including_deleted(customer_id):
+    query = """
+    SELECT id, full_name, date_of_birth, cpf, newsletter_opt_in 
+    FROM customers
+    WHERE id = %s;
+    """
+
+    params = (str(customer_id),)
+
+    customer = execute_query(query, params, fetch_one=True)
+    return customer
+
 def get_customer_by_cpf(cpf):
     query = """
     SELECT id
