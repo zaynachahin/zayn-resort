@@ -9,7 +9,7 @@ class ReservationStatus(str, Enum):
     CHECKED_IN = "checked_in"
     CHECKED_OUT = "checked_out"
     CANCELLED = "cancelled"
-    
+
 class ReservationCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     customer_id: UUID
@@ -35,7 +35,6 @@ class ReservationCreateResponse(BaseModel):
     status: ReservationStatus
     total_amount: Decimal
     created_at: datetime
-
 
 class ReservationUpdateResponse(BaseModel):
     id: UUID
