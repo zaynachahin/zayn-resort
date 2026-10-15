@@ -5,6 +5,7 @@ from app.repositories.room_category_repository import(
     get_room_category_by_name,
     get_room_category_by_name_excluding_id,
     get_room_category_by_id_including_deleted,
+    get_active_room_by_room_category_id,
     create_room_category,
     update_room_category,
     soft_delete_room_category,
@@ -154,6 +155,14 @@ def soft_delete_room_category_endpoint(id:UUID):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Room category not found"
         )
+
+    active_room = get_active_room_by_room_category_id(id)
+    if active_room:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Room category is in use"
+        )
+
     room_category = soft_delete_room_category(id)
     if not room_category:
         raise HTTPException(

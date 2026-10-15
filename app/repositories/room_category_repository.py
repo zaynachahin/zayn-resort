@@ -34,6 +34,19 @@ def get_room_category_by_name(name):
     room_category = execute_query(query, params, fetch_one=True)
     return room_category
 
+def get_active_room_by_room_category_id(id):
+    query = """
+    SELECT 1
+    FROM rooms
+    WHERE room_category_id = %s
+    AND deleted_at IS NULL
+    LIMIT 1;
+    """
+    params = (id,)
+
+    result = execute_query(query, params, fetch_one=True)
+    return result
+
 def get_room_category_by_name_excluding_id(name, id):
     query = """
     SELECT id
