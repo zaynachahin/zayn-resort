@@ -5,12 +5,12 @@ from app.repositories.room_category_repository import(
     get_room_category_by_name,
     get_room_category_by_name_excluding_id,
     get_room_category_by_id_including_deleted,
-    get_active_room_by_room_category_id,
     create_room_category,
     update_room_category,
     soft_delete_room_category,
     patch_room_category
 )
+from app.repositories.room_repository import get_active_room_by_room_category_id
 from app.schemas.room_category_schema import (
     RoomCategoryCreate,
     RoomCategoryUpdate,
