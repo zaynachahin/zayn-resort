@@ -379,7 +379,6 @@ def test_patch_room_returns_409_when_number_belongs_to_another(monkeypatch, clie
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json()["detail"] == "Room number already exists"
 
-
 # ==================== DELETE ====================
 
 def test_delete_room_returns_204(monkeypatch, client):
@@ -387,6 +386,10 @@ def test_delete_room_returns_204(monkeypatch, client):
     monkeypatch.setattr(
         "app.routes.room_routes.room_repository.get_room_by_id_including_deleted",
         lambda id: fake_room_row,
+    )
+    monkeypatch.setattr(
+        "app.routes.room_routes.get_active_reservation_by_room_id",
+        lambda room_id: None,
     )
     monkeypatch.setattr(
         "app.routes.room_routes.room_repository.soft_delete_room",
@@ -416,11 +419,34 @@ def test_delete_room_returns_404_when_not_exists(monkeypatch, client):
     assert response.json()["detail"] == "Room not found"
 
 
+def test_delete_room_returns_409_when_in_use(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr(
+        "app.routes.room_routes.room_repository.get_room_by_id_including_deleted",
+        lambda id: fake_room_row,
+    )
+    monkeypatch.setattr(
+        "app.routes.room_routes.get_active_reservation_by_room_id",
+        lambda room_id: {"?column?": 1},
+    )
+
+    # Act
+    response = client.delete(f"/rooms/{fake_room_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Room is in use"
+
+
 def test_delete_already_deleted_room_returns_409(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_routes.room_repository.get_room_by_id_including_deleted",
         lambda id: fake_room_row,
+    )
+    monkeypatch.setattr(
+        "app.routes.room_routes.get_active_reservation_by_room_id",
+        lambda room_id: None,
     )
     monkeypatch.setattr(
         "app.routes.room_routes.room_repository.soft_delete_room",
