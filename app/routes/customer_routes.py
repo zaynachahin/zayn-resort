@@ -11,6 +11,7 @@ from app.repositories.customer_repository import (
     patch_customer,
     soft_delete_customer
 )
+from app.repositories.reservation_repository import get_active_reservation_by_customer_id
 from app.schemas.customer_schema import CustomerCreate, CustomerUpdate, CustomerPatch, CustomerCreateResponse, CustomerUpdateResponse
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
@@ -114,6 +115,13 @@ def soft_delete_customer_endpoint(customer_id: UUID):
             detail="Customer not found"
         )
 
+    active_reservation = get_active_reservation_by_customer_id(customer_id)
+    if active_reservation:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Customer has active reservations"
+        )
+    
     customer = soft_delete_customer(customer_id)
     if not customer:
         raise HTTPException(
