@@ -384,6 +384,7 @@ def test_patch_customer_returns_422_when_id_is_invalid(client):
 def test_delete_customer_returns_204(monkeypatch, client):
     # Arrange
     monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id_including_deleted", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.get_active_reservation_by_customer_id", lambda customer_id: None)
     monkeypatch.setattr("app.routes.customer_routes.soft_delete_customer", lambda customer_id: fake_deleted_customer)
 
     # Act
@@ -406,9 +407,23 @@ def test_delete_customer_returns_404_when_customer_does_not_exist(monkeypatch, c
     assert response.json()["detail"] == "Customer not found"
 
 
+def test_delete_customer_returns_409_when_has_active_reservations(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id_including_deleted", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.get_active_reservation_by_customer_id", lambda customer_id: {"?column?": 1})
+
+    # Act
+    response = client.delete(f"/customers/{fake_customer_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Customer has active reservations"
+
+
 def test_delete_customer_returns_409_when_already_deleted(monkeypatch, client):
     # Arrange
     monkeypatch.setattr("app.routes.customer_routes.get_customer_by_id_including_deleted", lambda customer_id: fake_existing_customer)
+    monkeypatch.setattr("app.routes.customer_routes.get_active_reservation_by_customer_id", lambda customer_id: None)
     monkeypatch.setattr("app.routes.customer_routes.soft_delete_customer", lambda customer_id: None)
 
     # Act
@@ -417,3 +432,11 @@ def test_delete_customer_returns_409_when_already_deleted(monkeypatch, client):
     # Assert
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json()["detail"] == "Customer is already deleted"
+
+
+def test_delete_customer_returns_422_when_id_invalid(client):
+    # Act
+    response = client.delete("/customers/abc")
+
+    # Assert
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

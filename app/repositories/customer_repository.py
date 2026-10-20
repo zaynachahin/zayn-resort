@@ -72,7 +72,7 @@ def create_customer(full_name, date_of_birth, cpf, newsletter_opt_in):
     %s,
     %s,
     %s,
-    %s,
+    %s
     )
     RETURNING id, full_name, date_of_birth, cpf, newsletter_opt_in, created_at;
     """

@@ -3,6 +3,7 @@ from uuid import UUID
 from app.schemas.rooms_schema import RoomCreate, RoomUpdate, RoomPatch, RoomCreateResponse, RoomUpdateResponse
 from app.repositories import room_repository
 from app.repositories.room_category_repository import get_room_category_by_id
+from app.repositories.reservation_repository import get_active_reservation_by_room_id
 
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
@@ -116,6 +117,13 @@ def soft_delete_room_endpoint(id: UUID):
     existing_room = room_repository.get_room_by_id_including_deleted(id)
     if not existing_room:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+
+    active_reservation = get_active_reservation_by_room_id(id)
+    if active_reservation:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Room is in use"
+        )
 
     room = room_repository.soft_delete_room(id)
     if not room:

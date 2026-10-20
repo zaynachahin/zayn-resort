@@ -10,6 +10,7 @@ from app.repositories.room_category_repository import(
     soft_delete_room_category,
     patch_room_category
 )
+from app.repositories.room_repository import get_active_room_by_room_category_id
 from app.schemas.room_category_schema import (
     RoomCategoryCreate,
     RoomCategoryUpdate,
@@ -154,6 +155,14 @@ def soft_delete_room_category_endpoint(id:UUID):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Room category not found"
         )
+
+    active_room = get_active_room_by_room_category_id(id)
+    if active_room:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Room category is in use"
+        )
+
     room_category = soft_delete_room_category(id)
     if not room_category:
         raise HTTPException(

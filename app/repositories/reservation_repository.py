@@ -34,6 +34,34 @@ def list_reservations():
     result = execute_query(query, fetch_all=True)
     return result
 
+def get_active_reservation_by_room_id(room_id):
+    query = """
+    SELECT 1
+    FROM reservations
+    WHERE room_id = %s
+    AND status IN ('confirmed', 'checked_in')
+    AND deleted_at IS NULL
+    LIMIT 1;
+    """
+    params = (room_id,)
+
+    result = execute_query(query, params, fetch_one=True)
+    return result
+
+def get_active_reservation_by_customer_id(customer_id):
+    query = """
+    SELECT 1
+    FROM reservations
+    WHERE customer_id = %s
+    AND status IN ('confirmed', 'checked_in')
+    AND deleted_at IS NULL
+    LIMIT 1;
+    """
+    params = (customer_id,)
+
+    result = execute_query(query, params, fetch_one=True)
+    return result
+
 def get_conflicting_reservations(room_id, check_out, check_in):
     query = """
     SELECT id

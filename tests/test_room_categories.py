@@ -311,6 +311,10 @@ def test_soft_delete_room_category_returns_204(monkeypatch, client):
         lambda id: fake_room_category_row,
     )
     monkeypatch.setattr(
+        "app.routes.room_category_routes.get_active_room_by_room_category_id",
+        lambda id: None,
+    )
+    monkeypatch.setattr(
         "app.routes.room_category_routes.soft_delete_room_category",
         lambda id: fake_deleted_room_category,
     )
@@ -338,11 +342,34 @@ def test_soft_delete_room_category_returns_404_when_not_exists(monkeypatch, clie
     assert response.json()["detail"] == "Room category not found"
 
 
+def test_soft_delete_room_category_returns_409_when_in_use(monkeypatch, client):
+    # Arrange
+    monkeypatch.setattr(
+        "app.routes.room_category_routes.get_room_category_by_id_including_deleted",
+        lambda id: fake_room_category_row,
+    )
+    monkeypatch.setattr(
+        "app.routes.room_category_routes.get_active_room_by_room_category_id",
+        lambda id: {"?column?": 1},
+    )
+
+    # Act
+    response = client.delete(f"/room-categories/{fake_room_category_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Room category is in use"
+
+
 def test_soft_delete_room_category_returns_409_when_already_deleted(monkeypatch, client):
     # Arrange
     monkeypatch.setattr(
         "app.routes.room_category_routes.get_room_category_by_id_including_deleted",
         lambda id: fake_room_category_row,
+    )
+    monkeypatch.setattr(
+        "app.routes.room_category_routes.get_active_room_by_room_category_id",
+        lambda id: None,
     )
     monkeypatch.setattr(
         "app.routes.room_category_routes.soft_delete_room_category",
