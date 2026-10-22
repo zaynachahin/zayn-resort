@@ -1,24 +1,21 @@
+import os
 import psycopg
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class DatabaseConfig:
     def __init__(self):
-        self.dbname = "zayn_resort"
-        self.user = "postgres"
-        self.password = "Dohauhord1@%"
-        self.host = "localhost"
-        self.port = 5432
+        database_url = os.environ["DATABASE_URL"]
+        self.conninfo = database_url.replace("postgresql+psycopg://", "postgresql://", 1)
 
     def open_connection(self):
         return psycopg.connect(
-            dbname = self.dbname,
-            user = self.user,
-            password = self.password,
-            host = self.host,
-            port = self.port,
+            self.conninfo,
             row_factory=psycopg.rows.dict_row
         )
-    
+
 
 db = DatabaseConfig()
 
