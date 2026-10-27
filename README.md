@@ -1,30 +1,30 @@
 # Zayn Resort
 
-API REST de reservas de hotel feita em Python. Projeto de estudo e portfólio, com foco em arquitetura em camadas, integridade de dados e testes.
+A hotel reservation REST API built with Python. A study and portfolio project focused on layered architecture, data integrity and testing.
 
 ## Stack
 
-Python 3.14 · FastAPI · Pydantic v2 · PostgreSQL 18 · psycopg v3 (SQL puro, sem ORM) · Alembic · pytest
+Python 3.14 · FastAPI · Pydantic v2 · PostgreSQL 18 · psycopg v3 (raw SQL, no ORM) · Alembic · pytest
 
-## Funcionalidades
+## Features
 
-**Reservas (núcleo do sistema)**
-- Criação com validação de datas, verificação de cliente, quarto e categoria, detecção de conflito de período e cálculo automático de `total_amount` (diária × número de dias).
-- Alteração de datas (`PATCH /reservations/{id}/dates`) com nova checagem de conflito e recálculo do valor. Não é permitida em reservas `cancelled` ou `checked_out`.
-- Alteração de status (`PATCH /reservations/{id}/status`) com máquina de estados.
-- Apenas reservas `confirmed` e `checked_in` contam como ocupação do quarto.
+**Reservations (core of the system)**
+- Creation with date validation, customer/room/category checks, date-range conflict detection and automatic `total_amount` calculation (daily rate × number of days).
+- Date changes (`PATCH /reservations/{id}/dates`) with a new conflict check and total recalculation. Not allowed for `cancelled` or `checked_out` reservations.
+- Status changes (`PATCH /reservations/{id}/status`) driven by a state machine.
+- Only `confirmed` and `checked_in` reservations count as room occupancy.
 
-**Catálogo e clientes**
-- Categorias de quarto (nome, capacidade, diária) e quartos associados a uma categoria.
-- Clientes com CPF de 11 dígitos, data de nascimento e opt-in de newsletter.
+**Catalog and customers**
+- Room categories (name, capacity, daily rate) and rooms linked to a category.
+- Customers with an 11-digit CPF, date of birth and newsletter opt-in.
 
-**Todas as entidades**
-- CRUD completo (POST, GET, PUT, PATCH, DELETE) com soft delete (`deleted_at`) e timestamps.
-- Normalização de entrada (remoção de espaços nas pontas) e rejeição de campos desconhecidos (`extra="forbid"`).
-- Unicidade que ignora maiúsculas/minúsculas (nome de categoria, número de quarto) e que convive com soft delete.
-- Bloqueio de exclusão de entidades em uso (409).
+**All entities**
+- Full CRUD (POST, GET, PUT, PATCH, DELETE) with soft delete (`deleted_at`) and timestamps.
+- Input normalization (leading/trailing whitespace is stripped) and rejection of unknown fields (`extra="forbid"`).
+- Case-insensitive uniqueness (category name, room number) that works together with soft delete.
+- A category with active rooms, or a room or customer with active reservations (`confirmed` or `checked_in`), cannot be deleted (409).
 
-### Máquina de estados da reserva
+### Reservation state machine
 
 ```
 confirmed ──► checked_in ──► checked_out
@@ -32,58 +32,58 @@ confirmed ──► checked_in ──► checked_out
     └──────► cancelled
 ```
 
-`checked_out` e `cancelled` são estados finais. Qualquer outra transição retorna 409.
+`checked_out` and `cancelled` are final states. Any other transition returns 409.
 
-## Arquitetura
+## Architecture
 
 ```
-Request → Schema → Route → (Service) → Repository → Banco
+Request → Schema → Route → (Service) → Repository → Database
 ```
 
-| Camada | Responsabilidade |
+| Layer | Responsibility |
 |---|---|
-| Schema | Valida e normaliza a entrada com Pydantic. Erros viram 422 sem tocar o banco. |
-| Route | Camada HTTP: status, `response_model` e tradução de exceções de domínio em `HTTPException`. |
-| Service | Apenas Reservation: máquina de estados, `total_amount` e conflito de datas. Não conhece HTTP. |
-| Repository | Apenas SQL, no repository da tabela consultada. Nunca levanta exceção de domínio. |
-| `database.py` | Ponto único de acesso ao banco (`execute_query`). |
+| Schema | Validates and normalizes input with Pydantic. Errors become 422 without touching the database. |
+| Route | HTTP layer: status codes, `response_model` and translation of domain exceptions into `HTTPException`. |
+| Service | Reservation only: state machine, `total_amount` and date conflicts. Knows nothing about HTTP. |
+| Repository | SQL only, in the repository of the queried table. Never raises domain exceptions. |
+| `database.py` | Single access point to the database (`execute_query`). |
 
-As exceções de domínio ficam em `app/services/reservation_exceptions.py`.
+Domain exceptions live in `app/services/reservation_exceptions.py`.
 
-## Decisões de design
+## Design decisions
 
-**Reservas e regras de negócio**
-- **Service sem HTTP:** o Service levanta exceções de domínio e a Route as traduz em status HTTP.
-- **Ordem de validação:** recurso próprio (404) → corpo vazio (400) → recursos relacionados (404) → regra ou unicidade (409). Na criação de reserva: datas (422) → cliente → quarto → categoria (404) → conflito (409) → cálculo → INSERT.
-- **UPDATE com `if not result`:** um UPDATE pode afetar zero linhas por race condition, então o resultado vazio vira 404. Já `INSERT ... RETURNING` levanta exceção, não devolve vazio.
-- **Enum de status:** `ReservationStatus(str, Enum)` herda a comparação de `str`, mas sobrescreve `__str__`. Por isso o valor é convertido com `.value` na fronteira Service → Repository.
+**Reservations and business rules**
+- **Service without HTTP:** the Service raises domain exceptions and the Route translates them into HTTP status codes.
+- **Validation order:** own resource (404) → empty body (400) → related resources (404) → rule or uniqueness (409). On reservation creation: dates (422) → customer → room → category (404) → conflict (409) → calculation → INSERT.
+- **UPDATE with `if not result`:** an UPDATE can affect zero rows because of a race condition, so an empty result becomes 404. `INSERT ... RETURNING` raises an exception instead of returning empty.
+- **Status enum:** `ReservationStatus(str, Enum)` inherits `str` comparison but overrides `__str__`. That is why the value is converted with `.value` at the Service → Repository boundary.
 
-**Dados e banco**
-- **Dinheiro:** `Decimal` e `NUMERIC(10,2)`, nunca `float`. No JSON, `Decimal` é serializado como string.
-- **Código é UX, banco é integridade:** validações em código dão boas mensagens, e constraints do banco garantem a consistência.
-- **Soft delete e unicidade:** `UNIQUE` simples não funciona com soft delete. Uso índices únicos parciais (`WHERE deleted_at IS NULL`) sobre `LOWER(col)` quando a comparação ignora caixa, e a query usa a mesma expressão do índice.
-- **FK não protege soft delete:** soft delete é um `UPDATE`, então a linha referenciada continua existindo. A regra "em uso" fica na aplicação, com consultas de leitura antes do delete.
-- **Queries explícitas:** colunas nomeadas (sem `*`) e `RETURNING` para devolver o que foi persistido.
+**Data and database**
+- **Money:** `Decimal` and `NUMERIC(10,2)`, never `float`. In JSON, `Decimal` is serialized as a string.
+- **Code is UX, the database is integrity:** validations in code give good error messages, and database constraints guarantee consistency.
+- **Soft delete and uniqueness:** a plain `UNIQUE` does not work with soft delete. I use partial unique indexes (`WHERE deleted_at IS NULL`) on `LOWER(col)` when the comparison is case-insensitive, and the query uses the same expression as the index.
+- **FKs do not protect against soft delete:** soft delete is an `UPDATE`, so the referenced row still exists. The "in use" rule lives in the application, with read queries before the delete.
+- **Explicit queries:** named columns (no `*`) and `RETURNING` to return what was persisted.
 
-**API e schemas**
-- **PUT substitui, PATCH altera parcialmente:** o PATCH usa `model_dump(exclude_unset=True)`.
-- **Schemas separados:** entrada com `extra="forbid"`, e respostas sem essa restrição. Campos opcionais no banco usam `| None = None` na resposta.
-- **Respostas:** POST, PUT e PATCH devolvem o objeto completo, e DELETE devolve 204 sem corpo.
-- **DELETE:** 404 se o recurso nunca existiu e 409 se já foi deletado.
+**API and schemas**
+- **PUT replaces, PATCH updates partially:** PATCH uses `model_dump(exclude_unset=True)`.
+- **Separate schemas:** input schemas use `extra="forbid"`, response schemas do not. Fields that are optional in the database use `| None = None` in the response.
+- **Responses:** POST, PUT and PATCH return the full object, and DELETE returns 204 with no body.
+- **DELETE:** 404 if the resource never existed and 409 if it was already deleted.
 
 **Migrations**
-- Alembic, com migrations pequenas e reversíveis (`downgrade` inverso, em ordem inversa). Migrations aplicadas nunca são editadas.
-- Constraints e índices atuais: CHECK em `reservations.status`, índice único parcial de CPF (`customers_cpf_active_unique`), índice único parcial de nome de categoria e de número de quarto (sobre `LOWER`) e índice parcial em `reservations.room_id`.
+- Alembic, with small, reversible migrations (`downgrade` is the inverse, in reverse order). Applied migrations are never edited.
+- Current constraints and indexes: CHECK on `reservations.status`, partial unique index on CPF (`customers_cpf_active_unique`), partial unique indexes on category name and room number (on `LOWER`) and a partial index on `reservations.room_id`.
 
-**Configuração**
-- A conexão vem de `DATABASE_URL`, definida no `.env` (fora do Git). O `.env.example` documenta o formato.
+**Configuration**
+- The connection comes from `DATABASE_URL`, defined in `.env` (kept out of Git). `.env.example` documents the format.
 
-## Como rodar
+## Getting started
 
-**Pré-requisitos:** Python 3.14 e PostgreSQL 18 com um banco chamado `zayn_resort`.
+**Prerequisites:** Python 3.14 and PostgreSQL 18 with a database named `zayn_resort`.
 
 ```powershell
-git clone <url-do-repositorio>
+git clone https://github.com/zaynachahin/zayn-resort.git
 cd zayn-resort
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -93,72 +93,77 @@ alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
-Edite o `.env` com os seus dados. Ele nunca deve ser commitado:
+Edit `.env` with your own values. It must never be committed:
 
 ```
 DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/zayn_resort
 ```
 
-Caracteres especiais na senha devem ser codificados na URL (`@` vira `%40`, `%` vira `%25`).
+Special characters in the password must be URL-encoded (`@` becomes `%40`, `%` becomes `%25`).
 
-Documentação interativa: `http://localhost:8000/docs`
+Interactive documentation: `http://localhost:8000/docs`
 
 ## Endpoints
 
-| Recurso | Rotas |
+| Resource | Routes |
 |---|---|
-| Clientes | `GET/POST /customers`, `GET/PUT/PATCH/DELETE /customers/{customer_id}` |
-| Categorias de quarto | `GET/POST /room-categories`, `GET/PUT/PATCH/DELETE /room-categories/{id}` |
-| Quartos | `GET/POST /rooms`, `GET/PUT/PATCH/DELETE /rooms/{id}` |
-| Reservas | `GET/POST /reservations`, `GET/DELETE /reservations/{id}`, `PATCH /reservations/{id}/dates`, `PATCH /reservations/{id}/status` |
+| Customers | `GET/POST /customers`, `GET/PUT/PATCH/DELETE /customers/{customer_id}` |
+| Room categories | `GET/POST /room-categories`, `GET/PUT/PATCH/DELETE /room-categories/{id}` |
+| Rooms | `GET/POST /rooms`, `GET/PUT/PATCH/DELETE /rooms/{id}` |
+| Reservations | `GET/POST /reservations`, `GET/DELETE /reservations/{id}`, `PATCH /reservations/{id}/dates`, `PATCH /reservations/{id}/status` |
 
-### Códigos de status
+### Status codes
 
-| Código | Uso |
+| Code | Usage |
 |---|---|
-| 201 | Recurso criado |
-| 204 | Delete bem-sucedido, sem corpo |
-| 400 | Requisição válida, mas sem sentido (PATCH vazio) |
-| 404 | Recurso não existe |
-| 409 | Conflito de estado (duplicidade, já deletado, em uso, período indisponível, transição inválida) |
-| 422 | Requisição inválida, rejeitada antes de tocar o banco |
+| 201 | Resource created |
+| 204 | Successful delete, no body |
+| 400 | Valid request that makes no sense (empty PATCH) |
+| 404 | Resource does not exist |
+| 409 | State conflict (duplicate, already deleted, in use, period unavailable, invalid transition) |
+| 422 | Invalid request, rejected before touching the database |
 
-## Testes
+## Tests
 
 ```powershell
 python -m pytest -v
 ```
 
-A suíte segue o padrão AAA (Arrange, Act, Assert) e DRY, com `monkeypatch` no ponto onde a função é usada. Como os repositories são mockados, **os testes não executam SQL**. As queries, constraints e índices foram validados manualmente no `psql` e pela API.
+The suite follows the AAA pattern (Arrange, Act, Assert) and DRY, using `monkeypatch` where the function is used. Since repositories are mocked, **the tests do not execute SQL**. Queries, constraints and indexes were validated manually in `psql` and through the API.
 
-## Estrutura do projeto
+The suite has 125 tests.
+
+## Project structure
 
 ```
 app/
   main.py
   database.py
-  repositories/    # SQL, um arquivo por tabela
-  routes/          # camada HTTP
-  schemas/         # entrada e resposta (Pydantic)
-  services/        # regras de Reservation e exceções de domínio
-alembic/versions/  # migrations
-tests/             # testes e conftest.py (fixture client)
+  repositories/    # SQL, one file per table
+  routes/          # HTTP layer
+  schemas/         # input and response (Pydantic)
+  services/        # Reservation rules and domain exceptions
+alembic/versions/  # migrations (source of truth for the schema)
+tests/             # tests and conftest.py (client fixture)
+schema.sql         # initial schema (historical; may be outdated)
+seed.sql           # sample data
+pytest.ini
 .env.example
 alembic.ini.example
 ```
 
-## Limitações conhecidas
+## Known limitations
 
-- **Uma conexão por query:** sem pool e sem transação por requisição. Checar e gravar acontecem em transações separadas, então há risco de race condition (por exemplo, duas reservas simultâneas no mesmo período, ou delete concorrente com checagem de uso).
-- Sem testes de integração com PostgreSQL real.
-- Sem autenticação e sem autorização.
-- Mensagens 409 ainda não estão padronizadas entre as entidades.
-- Os endpoints GET devolvem dicts montados à mão, sem `response_model`.
+- **One connection per query:** no pool and no per-request transaction. Checking and writing happen in separate transactions, so there is a race condition risk (for example, two simultaneous reservations for the same period, or a concurrent delete with a usage check).
+- No integration tests against a real PostgreSQL.
+- No authentication or authorization.
+- 409 error messages are not yet standardized across entities.
+- GET endpoints return hand-built dicts, without `response_model`.
 
 ## Roadmap
 
-- Connection pool e uma transação por requisição (com `SELECT ... FOR UPDATE`).
-- Exclusion constraint para impedir reservas sobrepostas no banco.
-- Testes de integração com PostgreSQL real.
-- Autenticação.
-- `response_model` nos GETs e proteção contra `KeyError` nas transições de status.
+- Connection pool and one transaction per request (with `SELECT ... FOR UPDATE`).
+- Exclusion constraint to prevent overlapping reservations in the database.
+- Integration tests against a real PostgreSQL.
+- Authentication.
+- `response_model` on GET endpoints and protection against `KeyError` in status transitions.
