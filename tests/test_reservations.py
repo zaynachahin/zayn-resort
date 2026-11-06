@@ -139,6 +139,40 @@ def test_create_reservation_returns_409_when_room_not_available(monkeypatch, cli
     assert response.json()["detail"] == "Room not available"
 
 
+def test_create_reservation_returns_400_when_checkout_before_checkin(client):
+    # Arrange
+    payload = {
+        "customer_id": fake_customer_id,
+        "room_id": fake_room_id,
+        "check_in": "2027-02-04",
+        "check_out": "2027-01-26",
+    }
+
+    # Act
+    response = client.post("/reservations", json=payload)
+
+    # Assert
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Check_out must be after check_in"
+
+
+def test_create_reservation_returns_400_when_checkin_in_the_past(client):
+    # Arrange
+    payload = {
+        "customer_id": fake_customer_id,
+        "room_id": fake_room_id,
+        "check_in": "2020-01-01",
+        "check_out": "2020-01-10",
+    }
+
+    # Act
+    response = client.post("/reservations", json=payload)
+
+    # Assert
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Check in must be in the future"
+
+
 @pytest.mark.parametrize(
     "field, value",
     [
@@ -165,18 +199,6 @@ def test_create_reservation_returns_422_when_field_is_missing(client, valid_rese
     # Arrange
     payload = valid_reservation_payload.copy()
     del payload[field]
-
-    # Act
-    response = client.post("/reservations", json=payload)
-
-    # Assert
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-
-def test_create_reservation_returns_422_when_checkout_before_checkin(client, valid_reservation_payload):
-    # Arrange
-    payload = valid_reservation_payload.copy()
-    payload["check_out"] = "2027-01-22"
 
     # Act
     response = client.post("/reservations", json=payload)
@@ -302,7 +324,7 @@ def test_update_reservation_dates_returns_409_when_status_blocks_update(monkeypa
     assert response.json()["detail"] == "Cannot update dates of a cancelled or checked_out reservation"
 
 
-def test_update_reservation_dates_returns_422_when_checkout_before_checkin(client):
+def test_update_reservation_dates_returns_400_when_checkout_before_checkin(client):
     # Arrange
     payload = {"check_in": "2027-03-10", "check_out": "2027-03-01"}
 
@@ -310,7 +332,20 @@ def test_update_reservation_dates_returns_422_when_checkout_before_checkin(clien
     response = client.patch(f"/reservations/{fake_reservation_id}/dates", json=payload)
 
     # Assert
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Check_out must be after check_in"
+
+
+def test_update_reservation_dates_returns_400_when_checkin_in_the_past(client):
+    # Arrange
+    payload = {"check_in": "2020-01-01", "check_out": "2020-01-10"}
+
+    # Act
+    response = client.patch(f"/reservations/{fake_reservation_id}/dates", json=payload)
+
+    # Assert
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Check in must be in the future"
 
 
 # ==================== PATCH STATUS ====================
