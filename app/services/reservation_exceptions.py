@@ -22,5 +22,8 @@ class InvalidReservationOperationError(Exception):
 class InvalidReservationDatesError(Exception):
     pass
 
+class PastReservationDateError(Exception):
+    pass
+
 class ReservationAlreadyDeletedError(Exception):
     pass

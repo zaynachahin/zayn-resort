@@ -17,13 +17,19 @@ from app.services.reservation_exceptions import (
     InvalidStatusTransitionError,
     InvalidReservationOperationError,
     InvalidReservationDatesError,
+    PastReservationDateError,
     ReservationAlreadyDeletedError
 )
 from app.schemas.reservations_schema import ReservationStatus
 
+from datetime import date
+
 def _validate_reservation_dates(check_in, check_out):
+    date_today = date.today()
     if check_out <= check_in:
         raise InvalidReservationDatesError()
+    if check_in <= date_today:
+        raise PastReservationDateError()
 
 def create_reservation(customer_id, room_id, check_in, check_out):
     _validate_reservation_dates(check_in, check_out)   

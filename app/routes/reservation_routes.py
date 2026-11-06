@@ -12,6 +12,7 @@ from app.services.reservation_exceptions import (
     InvalidStatusTransitionError,
     InvalidReservationOperationError,
     InvalidReservationDatesError,
+    PastReservationDateError,
     ReservationAlreadyDeletedError
 )
 
@@ -32,19 +33,22 @@ def create_reservation_endpoint(payload: ReservationCreate):
         return result
 
     except InvalidReservationDatesError:
-        raise HTTPException(status_code=422, detail="Check_out must be after check_in")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check_out must be after check_in")
+
+    except PastReservationDateError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check in must be in the future")
     
     except CustomerNotFoundError:
-        raise HTTPException(status_code=404, detail="Customer not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
 
     except RoomNotFoundError:
-        raise HTTPException(status_code=404, detail="Room not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
 
     except RoomCategoryNotFoundError:
-        raise HTTPException(status_code=404, detail="Room Category not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room Category not found")
 
     except RoomNotAvailableError:
-        raise HTTPException(status_code=409, detail="Room not available")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room not available")
 
 @router.patch("/{id}/dates", status_code=status.HTTP_200_OK, response_model= ReservationUpdateResponse, summary=" ")
 def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
@@ -57,22 +61,25 @@ def update_reservation_dates_endpoint(id:UUID, payload:ReservationDateUpdate):
         return result
 
     except InvalidReservationDatesError:
-        raise HTTPException(status_code=422, detail="Check_out must be after check_in")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check_out must be after check_in")
+
+    except PastReservationDateError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check in must be in the future")
     
     except ReservationNotFoundError:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
 
     except InvalidReservationOperationError:
-        raise HTTPException(status_code=409, detail="Cannot update dates of a cancelled or checked_out reservation")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot update dates of a cancelled or checked_out reservation")
 
     except RoomNotFoundError:
-        raise HTTPException(status_code=404, detail="Room not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
 
     except RoomCategoryNotFoundError:
-        raise HTTPException(status_code=404, detail="Room Category not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room Category not found")
 
     except RoomNotAvailableError:
-        raise HTTPException(status_code=409, detail="Room not available")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room not available")
 
 @router.patch("/{id}/status", status_code=status.HTTP_200_OK, response_model= ReservationUpdateResponse, summary=" ")
 def update_reservation_status_endpoint(id:UUID, payload:ReservationStatusUpdate):
@@ -84,10 +91,10 @@ def update_reservation_status_endpoint(id:UUID, payload:ReservationStatusUpdate)
         return result
 
     except ReservationNotFoundError:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
 
     except InvalidStatusTransitionError:
-        raise HTTPException(status_code=409, detail="Cannot change status")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cannot change status")
 
 @router.get("/{id}", status_code=status.HTTP_200_OK, summary=" ")
 def get_reservation_endpoint(id:UUID):
@@ -136,7 +143,7 @@ def delete_reservation_endpoint(id: UUID):
         reservation_service.soft_delete_reservation(id)
 
     except ReservationNotFoundError:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
 
     except ReservationAlreadyDeletedError:
         raise HTTPException(status_code=409, detail="Reservation is already deleted")
