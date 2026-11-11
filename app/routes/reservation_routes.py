@@ -13,7 +13,8 @@ from app.services.reservation_exceptions import (
     InvalidReservationOperationError,
     InvalidReservationDatesError,
     PastReservationDateError,
-    ReservationAlreadyDeletedError
+    ReservationAlreadyDeletedError,
+    ActiveReservationError
 )
 
 router = APIRouter(
@@ -144,6 +145,9 @@ def delete_reservation_endpoint(id: UUID):
 
     except ReservationNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+
+    except ActiveReservationError:
+        raise HTTPException(status_code=409, detail="Reservation is active")
 
     except ReservationAlreadyDeletedError:
         raise HTTPException(status_code=409, detail="Reservation is already deleted")

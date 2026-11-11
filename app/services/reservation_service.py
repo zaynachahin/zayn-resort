@@ -18,7 +18,8 @@ from app.services.reservation_exceptions import (
     InvalidReservationOperationError,
     InvalidReservationDatesError,
     PastReservationDateError,
-    ReservationAlreadyDeletedError
+    ReservationAlreadyDeletedError,
+    ActiveReservationError
 )
 from app.schemas.reservations_schema import ReservationStatus
 
@@ -126,6 +127,10 @@ def soft_delete_reservation(id):
     reservation = reservation_repository.get_reservation_by_id_including_deleted(id)
     if not reservation:
         raise ReservationNotFoundError()
+
+    status = reservation["status"]
+    if status in [ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN]:
+        raise ActiveReservationError()
 
     result = reservation_repository.soft_delete_reservation(id)
     if not result:

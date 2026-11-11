@@ -406,7 +406,8 @@ def test_update_reservation_status_returns_409_for_invalid_transition(monkeypatc
 
 def test_delete_reservation_returns_204(monkeypatch, client):
     # Arrange
-    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: fake_reservation_row)
+    cancelled_reservation = make_reservation_with_status("cancelled")
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: cancelled_reservation)
     monkeypatch.setattr("app.services.reservation_service.reservation_repository.soft_delete_reservation", lambda id: {"id": fake_reservation_id, "deleted_at": "2024-01-03T00:00:00"})
 
     # Act
@@ -428,10 +429,23 @@ def test_delete_reservation_returns_404_when_not_exists(monkeypatch, client):
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "Reservation not found"
 
+@pytest.mark.parametrize("active_status", ["confirmed", "checked_in"])
+def test_delete_reservation_returns_409_when_reservation_is_active(monkeypatch, client, active_status):
+    # Arrange
+    active_reservation = make_reservation_with_status(active_status)
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: active_reservation)
+
+    # Act
+    response = client.delete(f"/reservations/{fake_reservation_id}")
+
+    # Assert
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "Reservation is active"
 
 def test_delete_reservation_returns_409_when_already_deleted(monkeypatch, client):
     # Arrange
-    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: fake_reservation_row)
+    cancelled_reservation = make_reservation_with_status("cancelled")
+    monkeypatch.setattr("app.services.reservation_service.reservation_repository.get_reservation_by_id_including_deleted", lambda id: cancelled_reservation)
     monkeypatch.setattr("app.services.reservation_service.reservation_repository.soft_delete_reservation", lambda id: None)
 
     # Act
