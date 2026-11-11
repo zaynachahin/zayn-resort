@@ -27,3 +27,6 @@ class PastReservationDateError(Exception):
 
 class ReservationAlreadyDeletedError(Exception):
     pass
+
+class ActiveReservationError(Exception):
+    pass

@@ -1,6 +1,8 @@
 # Zayn Resort
 
-A hotel reservation REST API built with Python. A study and portfolio project focused on layered architecture, data integrity and testing.
+A REST API for managing hotel reservations — handling room availability, booking conflicts, and reservation lifecycle from confirmation to check-out.
+
+Built with Python as a study and portfolio project focused on layered architecture, data integrity and testing
 
 ## Stack
 
@@ -23,6 +25,7 @@ Python 3.14 · FastAPI · Pydantic v2 · PostgreSQL 18 · psycopg v3 (raw SQL, n
 - Input normalization (leading/trailing whitespace is stripped) and rejection of unknown fields (`extra="forbid"`).
 - Case-insensitive uniqueness (category name, room number) that works together with soft delete.
 - A category with active rooms, or a room or customer with active reservations (`confirmed` or `checked_in`), cannot be deleted (409).
+- Active reservations (confirmed or checked_in) cannot be deleted (409).
 
 ### Reservation state machine
 
@@ -82,13 +85,23 @@ Domain exceptions live in `app/services/reservation_exceptions.py`.
 
 **Prerequisites:** Python 3.14 and PostgreSQL 18 with a database named `zayn_resort`.
 
-```powershell
+```bash
 git clone https://github.com/zaynachahin/zayn-resort.git
 cd zayn-resort
 python -m venv .venv
+
+# Windows
 .venv\Scripts\Activate.ps1
+
+# macOS / Linux
+source .venv/bin/activate
+
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
+
+# Create the database before running migrations
+createdb -U postgres zayn_resort
+
 alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
@@ -131,7 +144,7 @@ python -m pytest -v
 
 The suite follows the AAA pattern (Arrange, Act, Assert) and DRY, using `monkeypatch` where the function is used. Since repositories are mocked, **the tests do not execute SQL**. Queries, constraints and indexes were validated manually in `psql` and through the API.
 
-The suite has 125 tests.
+The suite has 129 tests.
 
 ## Project structure
 
@@ -154,7 +167,7 @@ alembic.ini.example
 
 ## Known limitations
 
-- **One connection per query:** no pool and no per-request transaction. Checking and writing happen in separate transactions, so there is a race condition risk (for example, two simultaneous reservations for the same period, or a concurrent delete with a usage check).
+- One connection per query: intentional for simplicity at this stage. The ideal next step is a connection pool with one transaction per request, SELECT ... FOR UPDATE and an exclusion constraint for overlapping reservations.
 - No integration tests against a real PostgreSQL.
 - No authentication or authorization.
 - 409 error messages are not yet standardized across entities.
