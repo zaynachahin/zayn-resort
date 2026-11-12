@@ -27,6 +27,18 @@ class ValidatorMixin:
             raise ValueError("CPF must contain only digits")
         return stripped_value
 
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, value):
+        if value is None:
+            return None
+        today = date.today()
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+        if value > today:
+            raise ValueError("Date of birth cannot be in the future")
+        if age < 18:
+            raise ValueError("Customer must be at least 18 years old")
+        return value
 
 
 class CustomerCreate(BaseModel, ValidatorMixin):

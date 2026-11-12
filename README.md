@@ -172,6 +172,7 @@ alembic.ini.example
 - No authentication or authorization.
 - 409 error messages are not yet standardized across entities.
 - GET endpoints return hand-built dicts, without `response_model`.
+- Customer age validation (minimum 18 years and no future date of birth) is handled by a Pydantic `field_validator`. This is a conscious decision for simplicity at this stage — a `Service` will be introduced in the future to handle business rules for customers, rooms and room categories.
 
 ## Roadmap
 
@@ -180,3 +181,6 @@ alembic.ini.example
 - Integration tests against a real PostgreSQL.
 - Authentication.
 - `response_model` on GET endpoints and protection against `KeyError` in status transitions.
+- `CustomerService`, `RoomService` and `RoomCategoryService` to isolate business rules from schemas.
+- Seasonal discount entity to apply dynamic pricing based on time of year.
+- Cashback entity to reward returning customers.
